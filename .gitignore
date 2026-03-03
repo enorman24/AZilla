@@ -1,0 +1,8 @@
+install
+.bender
+hardware/build
+*.S
+*.o
+verdiLog
+novas.conf
+novas.rc

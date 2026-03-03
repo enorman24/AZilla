@@ -177,7 +177,7 @@ ${VERIL_INSTALL_DIR}: Makefile
 	# Compile verilator
 	cd $(CURDIR)/toolchain/verilator && git clean -xfdf && autoconf && \
 	CC=$(CLANG_CC) CXX=$(CLANG_CXX) CXXFLAGS=$(CLANG_CXXFLAGS) LDFLAGS=$(CLANG_LDFLAGS) \
-		./configure --prefix=$(VERIL_INSTALL_DIR) && make -j8 && make install
+		./configure --prefix=$(VERIL_INSTALL_DIR) && make -j && make install
 
 # RISC-V Tests
 .PHONY: riscv_unit_tests

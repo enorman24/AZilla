@@ -39,43 +39,6 @@ For incremental runs, you can skip specific stages. For example, if the toolchai
 ./scripts/get-started.sh --skip-gcc --skip-llvm --skip-spike --skip-verilator
 ```
 
-If you prefer to execute the setup manually, start by syncing and updating the submodules:
-
-```bash
-git submodule sync --recursive
-make git-submodules
-```
-
-## Toolchain
-
-Ara requires a RISC-V LLVM toolchain capable of understanding the vector extension, version 1.0.
-
-To build this toolchain, run the following command in the project's root directory.
-
-```bash
-# Build the LLVM toolchain
-make toolchain-llvm
-```
-
-Ara also requires an updated Spike ISA simulator, with support for the vector extension.
-
-To build Spike, run the following command in the project's root directory.
-
-```bash
-# Build Spike
-make riscv-isa-sim
-```
-
-## Verilator
-
-Ara requires an updated version of Verilator, for RTL simulations.
-
-To build it, run the following command in the project's root directory.
-
-```bash
-# Build Verilator
-make verilator
-```
 
 ## Configuration
 
@@ -103,73 +66,9 @@ fmatmul example for 32 lane configuration
 make bin/fmatmul nr_clusters=4 nr_lanes=8
 ```
 
-### SPIKE Simulation
 
-All the applications can be simulated with SPIKE. Run the following command to build and run an application. E.g., `hello_world`:
-
-```bash
-cd apps
-make bin/hello_world.spike
-make spike-run-hello_world
-```
-
-### RISC-V Tests
-To run the standardized [https://github.com/riscv-software-src/riscv-tests](https://github.com/riscv-software-src/riscv-tests) for AraXL, run
-```bash
-make riscv_unit_tests
-```
-This downloads the latest repository containing standardized riscv tests and build all the unit tests and the benchmarks.
-
-A patch is applied to update the `tohost` memory location to the memory mapped `EOC` register in AraXL used by the verilog test bench to return a pass/success status.
-
-The test binary can be run as usual from the `hardware/` folder
-```bash
-make sim preload=<path-to-the-risc-test-binary>
-```
-
-## RTL Simulation
-
-### Hardware dependencies
-
-The Ara repository depends on external IPs and uses Bender to handle the IP dependencies.
-To install Bender and initialize all the hardware IPs, run the following commands:
-
-```bash
-# Go to the hardware folder
-cd hardware
-# Install Bender and checkout all the IPs
-make checkout
-```
-
-### Patches (only once!)
-
-Note: this step is required only once, and needs to be repeated ONLY if the IP hardware dependencies are deleted and checked out again.
-
-Some of the IPs need to be patched to work with Verilator.
-
-```bash
-# Go to the hardware folder
-cd hardware
-# Apply the patches (only need to run this once)
-make apply-patches
-```
 
 ### Simulation
-
-To simulate the Ara system with ModelSim, go to the `hardware` folder, which contains all the SystemVerilog files. Use the following command to run your simulation:
-
-```bash
-# Go to the hardware folder
-cd hardware
-# Only compile the hardware without running the simulation.
-make compile nr_clusters=4 nr_lanes=8
-# Run the simulation with the *hello_world* binary loaded
-app=hello_world make sim
-# Run the simulation with the *some_binary* binary. This allows specifying the full path to the binary
-preload=/some_path/some_binary make sim
-# Run the simulation without starting the gui
-app=hello_world make simc
-```
 
 For Synopsys VCS, the repository also provides a dedicated compile and headless simulation flow:
 
@@ -177,45 +76,14 @@ For Synopsys VCS, the repository also provides a dedicated compile and headless 
 # Go to the hardware folder
 cd hardware
 # Compile the RTL with VCS
-make compile_vcs
+make compile_vcs nr_clusters=4 nr_lanes=8
 # Run the simulation with the *hello_world* binary loaded
 app=hello_world make sim_vcs
-# Run the simulation in GUI mode
-app=hello_world make sim_gui_vcs
+# show waveform after simulation
+make show_vcs
 ```
 
-We also provide the `simv` makefile target to run simulations with the Verilator model.
 
-```bash
-# Go to the hardware folder
-cd hardware
-# Apply the patches (only need to run this once)
-make apply-patches
-# Only compile the hardware without running the simulation.
-make verilate
-# Run the simulation with the *hello_world* binary loaded
-app=hello_world make simv
-```
-
-It is also possible to simulate the unit tests compiled in the `apps` folder. Given the number of unit tests, we use Verilator. Use the following command to install Verilator, verilate the design, and run the simulation:
-
-```bash
-# Go to the hardware folder
-cd hardware
-# Apply the patches (only need to run this once)
-make apply-patches
-# Verilate the design
-make verilate
-# Run the tests
-make riscv_tests_simv
-```
-
-Alternatively, you can also use the `riscv_tests` target at Ara's top-level Makefile to both compile the RISC-V tests and run their simulation.
-
-### Traces
-
-Add `trace=1` to the `verilate`, `simv`, and `riscv_tests_simv` commands to generate waveform traces in the `fst` format.
-You can use `gtkwave` to open such waveforms.
 
 ### Ideal Dispatcher mode
 
@@ -240,17 +108,6 @@ To run the system in Ideal Dispatcher mode:
 cd hardware
 make sim app=${program} ideal_dispatcher=1 nr_clusters=4 nr_lanes=8
 ```
-
-### VCD Dumping
-
-It's possible to dump VCD files for accurate activity-based power analyses. To do so, use the `vcd_dump=1` option to compile the program and to run the simulation:
-
-```bash
-make -C apps bin/${program} vcd_dump=1
-make -C hardware simc app=${program} vcd_dump=1
-```
-
-Currently, the following kernels support automatic VCD dumping: `fmatmul`, `fconv3d`, `fft`, `dwt`, `exp`, `cos`, `log`, `dropout`, `jacobi2d`.
 
 ### Linting Flow
 

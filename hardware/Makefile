@@ -31,8 +31,8 @@ ifneq (${CLANG_PATH},)
 	CLANG_CXXFLAGS := -CFLAGS "-nostdinc++ -isystem $(CLANG_PATH)/include/c++/v1"
 	CLANG_LDFLAGS  := -LDFLAGS "-L $(CLANG_PATH)/lib -Wl,-rpath,$(CLANG_PATH)/lib -lc++ -nostdlib++"
 else
-	CLANG_CXXFLAGS := ""
-	CLANG_LDFLAGS  := ""
+	CLANG_CXXFLAGS :=
+	CLANG_LDFLAGS  :=
 endif
 
 # build path
@@ -50,10 +50,21 @@ dpi_library    ?= work-dpi
 vcs_binary     ?= $(abspath $(vcs_buildpath)/simv)
 # VCS compile script
 vcs_script     ?= $(vcs_buildpath)/compile_$(config).sh
+# VCS waveform output
+vcs_fsdb       ?= waveform.fsdb
+vcs_fsdb_path  ?= $(abspath $(vcs_buildpath)/$(vcs_fsdb))
+# Verdi command
+verdi_cmd      ?= verdi
 # verilator library
 veril_library  ?= $(buildpath)/verilator
 # verilator path
 veril_path     ?= $(abspath $(INSTALL_DIR)/verilator/bin)
+# Use the real binary for the first pass and point recursive wrapper invocations back to it.
+veril_cmd      ?= $(abspath $(veril_path)/verilator_bin)
+veril_bin_rel  ?= ../../bin/verilator_bin
+veril_opt_fast ?= -O0
+veril_output_split ?= 1000
+veril_output_split_cfuncs ?= 1000
 # verilator top-level
 veril_top      ?= ara_tb_verilator
 # Top level module to compile
@@ -75,9 +86,13 @@ vhdlan_cmd     ?= vhdlan
 # VCS elaboration/runtime arguments
 vcs_elab_args  ?=
 vcs_run_args   ?=
+vcs_elab_args  += -ignore initializer_driver_checks -kdb -debug_access+all
 # VCS compile arguments passed through Bender
 vlogan_args    ?=
 vhdlan_args    ?=
+vlogan_args    += -timescale=1ns/1ps -kdb -debug_access+all
+# Ariane's tracer sources include local .svh headers from this directory.
+vlogan_args    += +incdir+$(abspath $(ROOT_DIR)/deps/ariane/common/local/util)
 # Path to the binaries
 app_path       ?= $(abspath $(ROOT_DIR)/../apps/bin)
 # Path to ideal dispatcher vtraces
@@ -95,11 +110,13 @@ ifeq ($(vcd_dump), 1)
   bender_defs += --define VCD_DUMP=1 --define VCD_PATH=$(vcd_path)
 endif
 
-# Check if the specified QuestaSim version exists
-ifeq (, $(shell which $(questa_cmd)))
+# Check if the specified QuestaSim version exists when a Questa target is requested.
+ifneq ($(strip $(filter lib compile sim simc,$(MAKECMDGOALS))),)
+ifeq (, $(shell command -v $(questa_cmd) 2>/dev/null))
   # Spaces are needed for indentation here!
-  $(warning "Specified QuestaSim version ($(questa_cmd)) not found in PATH $(PATH)")
+  $(warning "Specified QuestaSim version ($(questa_cmd)) not found in PATH")
   questa_cmd =
+endif
 endif
 
 questa_args += +UVM_NO_RELNOTES
@@ -218,20 +235,20 @@ simc: compile
 	./scripts/return_status.sh $(buildpath)/transcript
 
 # VCS
-.PHONY: compile_vcs sim_vcs simc_vcs sim_gui_vcs
+.PHONY: compile_vcs sim_vcs simc_vcs sim_gui_vcs show_vcs
 compile_vcs: dpi $(vcs_buildpath) bender $(vcs_binary)
 
 $(vcs_script): $(vcs_buildpath) $(BENDER) $(config_file) Makefile ../Bender.yml $(shell find src -type f) $(shell find ../config -type f) $(shell find include -type f) $(shell find tb -type f) $(shell find deps -type f)
 	$(BENDER) script vcs --vlogan-bin=$(vlogan_cmd) --vhdlan-bin=$(vhdlan_cmd) \
-	$(foreach arg,$(vlogan_args),--vlogan-arg=$(arg)) \
-	$(foreach arg,$(vhdlan_args),--vhdlan-arg=$(arg)) \
+	$(foreach arg,$(vlogan_args),--vlog-arg=$(arg)) \
+	$(foreach arg,$(vhdlan_args),--vcom-arg=$(arg)) \
 	$(bender_targs_vcs) $(bender_defs) > $(vcs_script)
 	chmod +x $(vcs_script)
 
 $(vcs_binary): $(vcs_script)
 	cd $(vcs_buildpath) && ./$(notdir $(vcs_script))
 	cd $(vcs_buildpath) && $(vcs_cmd) -full64 $(vcs_elab_args) \
-		-Mdir $(notdir $(vcs_csrc_dir)) -o $(notdir $(vcs_binary)) $(top_level)
+		-Mdir=$(notdir $(vcs_csrc_dir)) -o $(notdir $(vcs_binary)) $(top_level)
 
 sim_vcs: compile_vcs
 	set -o pipefail; cd $(vcs_buildpath) && \
@@ -244,6 +261,10 @@ sim_gui_vcs: compile_vcs
 	set -o pipefail; cd $(vcs_buildpath) && \
 		./$(notdir $(vcs_binary)) -gui -sv_lib $(abspath $(buildpath)/$(dpi_library)/ara_dpi) $(vcs_run_args) 2>&1 | tee transcript
 	./scripts/return_status.sh $(vcs_buildpath)/transcript
+
+show_vcs:
+	@test -f $(vcs_fsdb_path) || { echo "Missing FSDB: $(vcs_fsdb_path). Run 'make sim_vcs' first."; exit 1; }
+	$(verdi_cmd) -ssf $(vcs_fsdb_path)
 
 # RISC-V Tests simulation
 APPS_DIR := $(abspath $(ROOT_DIR)/../apps)
@@ -261,7 +282,7 @@ $(veril_library)/V$(veril_top): $(config_file) Makefile ../Bender.yml $(shell fi
 	rm -rf $(veril_library); mkdir -p $(veril_library)
 	$(BENDER) script verilator $(bender_targs_veril) $(bender_defs_veril) > $(veril_library)/bender_script_$(config)
 # Verilate the design
-	$(veril_path)/verilator -f $(veril_library)/bender_script_$(config)           \
+	VERILATOR_BIN=$(veril_bin_rel) $(veril_cmd) -f $(veril_library)/bender_script_$(config) \
   -O3                                                                           \
   -Wno-fatal                                                                    \
   -Wno-PINCONNECTEMPTY                                                          \
@@ -277,6 +298,8 @@ $(veril_library)/V$(veril_top): $(config_file) Makefile ../Bender.yml $(shell fi
   -Wno-WIDTHCONCAT                                                              \
   -Wno-ENUMVALUE                                                                \
   -Wno-COMBDLY                                                                  \
+  --output-split $(veril_output_split)                                          \
+  --output-split-cfuncs $(veril_output_split_cfuncs)                            \
   --hierarchical                                                                \
   tb/verilator/waiver.vlt                                                       \
   --Mdir $(veril_library)                                                       \
@@ -299,7 +322,7 @@ $(veril_library)/V$(veril_top): $(config_file) Makefile ../Bender.yml $(shell fi
   --cc                                                                          \
   $(if $(trace),--trace-fst -Wno-INSECURE,)                                     \
   --top-module $(veril_top) &&                                                  \
-	cd $(veril_library) && OBJCACHE='' make -j4 -f V$(veril_top).mk
+	cd $(veril_library) && OBJCACHE='' VERILATOR_BIN=$(veril_bin_rel) make -j OPT_FAST='$(veril_opt_fast)' -f V$(veril_top).mk
 
 # Simulation
 .PHONY: simv

@@ -23,6 +23,13 @@ module ara_tb;
   timeprecision 1ps;
   `endif
 
+`ifdef VCS
+  initial begin
+    $fsdbDumpfile("waveform.fsdb");
+    $fsdbDumpvars(0, "+struct");
+  end
+`endif
+
   `ifdef NR_LANES
   localparam NrLanes = `NR_LANES;
   `else
