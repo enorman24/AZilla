@@ -25,7 +25,8 @@ module shuffle_stage import ara_pkg::*; import rvv_pkg::*;  #(
   // Shuffling starts from EEW1 to support mask loads
   localparam int           unsigned TotalNrLanes        = NrClusters * NrLanes,
   localparam int           unsigned NumStages           = $clog2(ClusterAxiDataWidth/NrLanes),
-  localparam int           unsigned NumBuffers          = 2
+  localparam int           unsigned NumBuffers          = 2,
+  localparam int           unsigned ClustersPerBuffer   = (NrClusters > NumBuffers) ? NrClusters / NumBuffers : 1
 ) (
   // Clock and Reset
   input  logic                        clk_i,
@@ -34,8 +35,7 @@ module shuffle_stage import ara_pkg::*; import rvv_pkg::*;  #(
   input  cluster_metadata_t [NrClusters-1:0]  cluster_metadata_i,
 
   // Synchronization with cluster addrgen for indexed operations 
-  output logic              [NrClusters-1:0]  idx_completed_o,
-  input logic                                 idx_completed_sync_i,
+  output logic                                idx_completed_o,
   
   input   axi_req_t  [NrClusters-1:0] axi_req_i,
   output  axi_req_t  [NrClusters-1:0] axi_req_o,
@@ -49,7 +49,7 @@ module shuffle_stage import ara_pkg::*; import rvv_pkg::*;  #(
 // 2) Buffer - to buffer the data coming from memory if the element width is 64b and ClusterAxiDataWidth is 32N, since in this case, the data coming from memory needs to be stored and sent in 2 cycles to the clusters. 
 // This is only needed for loads, for stores we can just buffer the write data until we have enough data to send to the clusters.
 
-typedef enum  { SHUFFLE, BUFFER } datapath_t;
+typedef enum logic { SHUFFLE, BUFFER } datapath_t;
 
 // This is the main tracking structure for the requests coming into the shuffle stage. 
 // It keeps track of the status of each request and is used to configure the shuffle and buffer datapath.
@@ -73,7 +73,8 @@ typedef struct packed {
   ara_op_e op;
 } req_track_t;
 
-localparam int unsigned NumTrackers=8;
+localparam int unsigned NumTrackers=16;
+
 typedef logic [$clog2(NumTrackers)-1:0] pnt_t; 
 typedef logic [$clog2(NumTrackers):0] cnt_t; 
 
@@ -105,8 +106,12 @@ assign wr_full = (wr_cnt_q == NumTrackers);
 
 logic [$clog2(NrLanes):0] lane_ar_d, lane_ar_q;
 logic [$clog2(NrLanes):0] lane_aw_d, lane_aw_q;
+logic [$clog2(NrLanes):0] lane_w_d, lane_w_q;
 logic [$clog2(NrClusters):0] cluster_ar_d, cluster_ar_q;
 logic [$clog2(NrClusters):0] cluster_aw_d, cluster_aw_q;
+logic [$clog2(NrClusters):0] cluster_w_d, cluster_w_q;
+
+logic wr_idx_accepted_d, wr_idx_accepted_q;
 
 // To handle cases where vlsu of each cluster is ready to 
 // receive read resp or not.
@@ -223,9 +228,15 @@ logic [NumBuffers-1:0] buf_valid_d, buf_valid_q;
 logic r_ready_buf, r_ready_buf_q;
 
 datapath_t rd_datapath;
-assign rd_datapath = rd_tracker_q[rd_issue_pnt_q[0]].datapath;
 ara_op_e rd_op;
-assign rd_op = rd_tracker_q[rd_issue_pnt_q[0]].op;
+
+// If responses switch from BUFFER to SHUFFLE datapath, we stall to ensure that all responses for the BUFFER datapath have been handled
+// Otherwise the responses that need to use the BUFFER datapath erroneously go into the SHUFFLE datpath.
+logic stall_resp;
+assign stall_resp = (rd_tracker_q[rd_issue_pnt_q[1]].datapath == BUFFER) && (rd_tracker_q[rd_issue_pnt_q[0]].datapath == SHUFFLE) && (rd_cnt_q != 0);
+
+assign rd_datapath = stall_resp ? BUFFER : rd_tracker_q[rd_issue_pnt_q[0]].datapath;
+assign rd_op = stall_resp ? rd_tracker_q[rd_issue_pnt_q[1]].op : rd_tracker_q[rd_issue_pnt_q[0]].op;
 
 // Write packets
 logic [NrClusters-1:0] [ClusterAxiDataWidth*2-1:0]  wrbuf_d, wrbuf_q;
@@ -238,17 +249,16 @@ logic [NrClusters-1:0] wrbuf_valid, wrbuf_valid_q;
 logic [NrClusters-1:0] wrbuf_full, wrbuf_full_q;
 logic wr_out_ready, wr_out_valid;
 
-datapath_t wr_in_state;
-assign wr_in_state = wr_tracker_q[wr_issue_pnt_q[0]].datapath;
+datapath_t wr_datapath;
+ara_op_e wr_op;
+assign wr_datapath = wr_tracker_q[wr_issue_pnt_q[0]].datapath;
+assign wr_op = wr_tracker_q[wr_issue_pnt_q[0]].op;
 
 logic [NrClusters-1:0] wr_cluster_completed, rd_cluster_completed_d, rd_cluster_completed_q;
 logic [NumBuffers-1:0] rd_buffer_completed_d, rd_buffer_completed_q;
 logic [NumBuffers-1:0] wr_buffer_completed_d, wr_buffer_completed_q;
 
-vlen_t [NrClusters-1:0] vl_idx_cluster_d, vl_idx_cluster_q;
-
-logic [NrClusters-1:0] idx_completed_d, idx_completed_q;
-assign idx_completed_o = idx_completed_d;
+vlen_cluster_t vl_idx_cluster_d, vl_idx_cluster_q;
 
 logic pending_resp;
 
@@ -301,8 +311,10 @@ always_ff @(posedge clk_i or negedge rst_ni) begin
     lane_ar_q <= '0;
     cluster_aw_q <= '0;
     lane_aw_q <= '0;
+    cluster_w_q <= '0;
+    lane_w_q <= '0;
     vl_idx_cluster_q <= '0;
-    idx_completed_q <= '0;
+    wr_idx_accepted_q <= '0;
   end else begin
     rd_tracker_q    <= rd_tracker_d;
     wr_tracker_q    <= wr_tracker_d;
@@ -319,8 +331,10 @@ always_ff @(posedge clk_i or negedge rst_ni) begin
     lane_ar_q <= lane_ar_d;
     cluster_aw_q <= cluster_aw_d;
     lane_aw_q <= lane_aw_d;
+    cluster_w_q <= cluster_w_d;
+    lane_w_q <= lane_w_d;
     vl_idx_cluster_q <= vl_idx_cluster_d;
-    idx_completed_q <= idx_completed_d;
+    wr_idx_accepted_q <= wr_idx_accepted_d;
   end
 end
 
@@ -348,14 +362,7 @@ always_comb begin
   lane_ar_d = lane_ar_q;
   cluster_ar_d = cluster_ar_q;
   vl_idx_cluster_d = vl_idx_cluster_q;
-  idx_completed_d = idx_completed_q;
-
-  // If the clusters have synchronized, reset values
-  if (idx_completed_sync_i) begin
-    lane_ar_d = '0;
-    cluster_ar_d = '0;
-    idx_completed_d = 1'b0;
-  end
+  idx_completed_o = 1'b0;
   
   if (axi_req_i[cluster_ar_q].ar_valid & axi_resp_o[cluster_ar_q].ar_ready) begin
     automatic cluster_metadata_t cluster_metadata = cluster_metadata_i[cluster_ar_q];
@@ -385,9 +392,9 @@ always_comb begin
     rd_tracker_d[rd_accept_pnt_q].second_buffer_unused = cluster_metadata.vl <= (NrLanes * NrClusters / 2) && rd_tracker_d[rd_accept_pnt_q].datapath;
     rd_tracker_d[rd_accept_pnt_q].op = cluster_metadata.op;
 
-    // If it is a VLXE request, take from the desired cluster
+    // If it is a VLXE/VLSE request, take from the desired cluster
     // and switch clusters for every NrLanes requests
-    if (cluster_metadata.op == VLXE) begin
+    if (cluster_metadata.op inside {VLXE, VLSE}) begin
       lane_ar_d += 1;
       if (lane_ar_q == NrLanes - 1) begin
         cluster_ar_d += 1;
@@ -398,54 +405,65 @@ always_comb begin
       end
       
       // If a valid request is sent, track it for synchronization
-      if (axi_req_o[cluster_ar_q].ar_valid & axi_resp_i[cluster_ar_q].ar_ready) begin
-        vl_idx_cluster_d[cluster_ar_q] = vl_idx_cluster_q[cluster_ar_q] + 1;
-        if (vl_idx_cluster_q[cluster_ar_q] == (cluster_metadata.vl_local - 1)) begin
-          vl_idx_cluster_d[cluster_ar_q] = '0;
-          idx_completed_d[cluster_ar_q] = 1'b1;
+      if (axi_req_o[cluster_ar_q].ar_valid & axi_resp_o[cluster_ar_q].ar_ready) begin
+        vl_idx_cluster_d = vl_idx_cluster_q + 1;
+        if (vl_idx_cluster_q == (cluster_metadata.vl - 1)) begin
+          vl_idx_cluster_d = '0;
+          idx_completed_o = 1'b1;
+          lane_ar_d = '0;
+          cluster_ar_d = '0;
         end
       end
     end else begin
       lane_ar_d = '0;
       cluster_ar_d = '0;
-      idx_completed_d = 1'b0;
     end
   end
 
   lane_aw_d = lane_aw_q;
   cluster_aw_d = cluster_aw_q;
-
+  lane_w_d = lane_w_q;
+  cluster_w_d = cluster_w_q;
+  wr_idx_accepted_d = wr_idx_accepted_q;
+  
   if (axi_req_i[cluster_aw_q].aw_valid & axi_resp_o[cluster_aw_q].aw_ready) begin
     automatic cluster_metadata_t cluster_metadata = cluster_metadata_i[cluster_aw_q];
-    // Store element width
-    wr_tracker_d[wr_accept_pnt_q].vew = cluster_metadata.vew;
-    wr_tracker_d[wr_accept_pnt_q].use_eew1 = cluster_metadata.use_eew1;
-    // Track number of beats and vl
-    for (int c=0; c<NrClusters; c++) begin
-      automatic int unsigned vl_tot = cluster_metadata.vl;
-      automatic int unsigned vl_rem = vl_tot & (TotalNrLanes - 1);
-      automatic int unsigned vl_base = vl_tot >> $clog2(TotalNrLanes);
-      automatic int unsigned vl_rem_diff = vl_rem - (c * NrLanes);
-      automatic int unsigned vl = (vl_base << $clog2(NrLanes)) + ((vl_rem >= (c + 1) * NrLanes) ? NrLanes : (vl_rem >= (c * NrLanes)) ? vl_rem_diff : '0);      
 
-      wr_tracker_d[wr_accept_pnt_q].vl[c] = vl;
-      wr_tracker_d[wr_accept_pnt_q].len[c] = axi_req_i[cluster_aw_q].aw.len+1;
-    end
-    // Update pnt to accept next request
-    wr_accept_pnt_d = (wr_accept_pnt_q == NumTrackers-1) ? '0 : wr_accept_pnt_q + 1; 
-    wr_cnt_d += 1;
-    // To enable certain shuffle stages based on element width
-    for (int s=0; s<NumStages; s++) begin
-      wr_tracker_d[wr_accept_pnt_q].shuffle_en[s] = cluster_metadata.use_eew1 ? 1'b1 : (((NumStages -s -1) >= (3 + cluster_metadata.vew)) ? 1'b1 : 1'b0);
-    end
-    // To enable buffer for 64b element widths
-    wr_tracker_d[wr_accept_pnt_q].datapath = NumStages < (3 + cluster_metadata.vew) ? BUFFER : SHUFFLE;
-    wr_tracker_d[wr_accept_pnt_q].second_buffer_unused = cluster_metadata.vl <= (NrLanes * NrClusters / 2) && wr_tracker_d[wr_accept_pnt_q].datapath;
-    wr_tracker_d[wr_accept_pnt_q].op = cluster_metadata.op;
+    if (!wr_idx_accepted_q) begin
+      // Store element width
+      wr_tracker_d[wr_accept_pnt_q].vew = cluster_metadata.vew;
+      wr_tracker_d[wr_accept_pnt_q].use_eew1 = cluster_metadata.use_eew1;
+      // Track number of beats and vl
+      for (int c=0; c<NrClusters; c++) begin
+        automatic int unsigned vl_tot = cluster_metadata.vl;
+        automatic int unsigned vl_rem = vl_tot & (TotalNrLanes - 1);
+        automatic int unsigned vl_base = vl_tot >> $clog2(TotalNrLanes);
+        automatic int unsigned vl_rem_diff = vl_rem - (c * NrLanes);
+        automatic int unsigned vl = (vl_base << $clog2(NrLanes)) + ((vl_rem >= (c + 1) * NrLanes) ? NrLanes : (vl_rem >= (c * NrLanes)) ? vl_rem_diff : '0);      
 
-    // If it is a VSXE request, take from the desired cluster
+        wr_tracker_d[wr_accept_pnt_q].vl[c] = vl;
+        wr_tracker_d[wr_accept_pnt_q].len[c] = axi_req_i[cluster_aw_q].aw.len+1;
+      end
+      // Update pnt to accept next request
+      wr_accept_pnt_d = (wr_accept_pnt_q == NumTrackers-1) ? '0 : wr_accept_pnt_q + 1; 
+      wr_cnt_d += 1;
+
+      // If indexed/strided request, write to tracker only once
+      wr_idx_accepted_d = (cluster_metadata.op inside {VSXE, VSSE});
+
+      // To enable certain shuffle stages based on element width
+      for (int s=0; s<NumStages; s++) begin
+        wr_tracker_d[wr_accept_pnt_q].shuffle_en[s] = cluster_metadata.use_eew1 ? 1'b1 : (((NumStages -s -1) >= (3 + cluster_metadata.vew)) ? 1'b1 : 1'b0);
+      end
+      // To enable buffer for 64b element widths
+      wr_tracker_d[wr_accept_pnt_q].datapath = NumStages < (3 + cluster_metadata.vew) ? BUFFER : SHUFFLE;
+      wr_tracker_d[wr_accept_pnt_q].second_buffer_unused = cluster_metadata.vl <= (NrLanes * NrClusters / 2) && wr_tracker_d[wr_accept_pnt_q].datapath;
+      wr_tracker_d[wr_accept_pnt_q].op = cluster_metadata.op;
+    end
+
+    // If it is a VSXE/VSSE request, take from the desired cluster
     // and switch clusters for every NrLanes requests
-    if (cluster_metadata.op == VLXE) begin
+    if (cluster_metadata.op inside {VSXE, VSSE}) begin
       lane_aw_d += 1;
       if (lane_aw_q == NrLanes - 1) begin
         cluster_aw_d += 1;
@@ -454,9 +472,22 @@ always_comb begin
         end
         lane_aw_d = '0;
       end
+
+      // If a valid request is sent, track it for synchronization
+      if (axi_req_o[cluster_aw_q].aw_valid & axi_resp_i[cluster_aw_q].aw_ready) begin
+        vl_idx_cluster_d = vl_idx_cluster_q + 1;
+        if (vl_idx_cluster_q == (cluster_metadata.vl - 1)) begin
+          vl_idx_cluster_d = '0;
+          idx_completed_o = 1'b1;
+          lane_aw_d = '0;
+          cluster_aw_d = '0;
+          wr_idx_accepted_d = 1'b0;
+        end
+      end
     end else begin
       lane_aw_d = '0;
       cluster_aw_d = '0;
+      wr_idx_accepted_d = 1'b0;
     end
   end
 
@@ -523,7 +554,7 @@ always_comb begin
 
   // If there is an existing valid data in the buffer and the next request does not use the buffer datapath
   // we need to stall until the buffer responses are committed to the clusters
-  pending_resp = ((rd_datapath == SHUFFLE) || (rd_op == VLXE)) && (|buf_valid_q);
+  pending_resp = ((rd_datapath == SHUFFLE) || (rd_op inside {VLXE, VLSE})) && (|buf_valid_q);
 
   if ((((rd_datapath == BUFFER) || (|buf_valid_q)) && (rd_op == VLE))  || pending_resp) begin
 
@@ -563,7 +594,7 @@ always_comb begin
             automatic int cl = b ? (NrClusters / NumBuffers) + c : c;
             
             // Set valid to the response
-            axi_resp_buf_out[cl].r_valid = 1'b1;
+            axi_resp_buf_out[cl].r_valid = (rd_tracker_q[rd_issue_pnt_q[b]].vl[cl] > 0) ? 1'b1 : 1'b0;
             rd_tracker_d[rd_issue_pnt_q[b]].len[cl] -= 1;
 
             // If the response is the last response, set last
@@ -591,7 +622,7 @@ always_comb begin
           
           // If the clusters corresponding to a buffer completed,
           // Clear buffer valid and go to the next instruction
-          if (&(rd_cluster_completed_d[b*(NrClusters/NumBuffers)+:(NrClusters/NumBuffers)])) begin
+          if (&(rd_cluster_completed_d[b*ClustersPerBuffer +: ClustersPerBuffer])) begin
             // Change to next instruction for the particular buffer
             // Since each buffer can complete at different times, we maintain a different instruction pointer
             rd_issue_pnt_d[b] = (rd_issue_pnt_q[b] == NumTrackers-1) ? '0 : rd_issue_pnt_q[b] + 1;
@@ -601,7 +632,7 @@ always_comb begin
             shift_d[b] = 1'b0;
 
             // Set the clusters corresponding to the buffer as completed for the instruction
-            rd_cluster_completed_d[b*(NrClusters/NumBuffers)+:(NrClusters/NumBuffers)] = '0;
+            rd_cluster_completed_d[b*ClustersPerBuffer +: ClustersPerBuffer] = '0;
 
             // Set the buffer as completed
             rd_buffer_completed_d[b] = 1'b1;
@@ -634,12 +665,12 @@ always_comb begin
     // The next buffer has to be available only then ready to receive
     r_ready_buf = (buf_valid_d[rdbuf_pnt_d] == 1'b0);
   end 
-  else if (rd_op == VLXE & ~pending_resp) begin
+  else if ((rd_op inside {VLXE, VLSE}) & ~pending_resp) begin
 
-    ///// INDEXED LOADS      /////
+    ///// INDEXED/STRIDED LOADS /////
     ///// All bit precisions ///// 
 
-    // If indexed operation, just forward the data coming from GLSU without shuffling or buffering
+    // If indexed and strided operation, just forward the data coming from GLSU without shuffling or buffering
     automatic logic single_cluster_handshake = 1'b0;
     for (int c=0; c < NrClusters; c++) begin
       axi_resp_buf_out[c].r_valid = axi_resp_i[c].r_valid;
@@ -671,126 +702,171 @@ always_comb begin
 
   wr_buffer_completed_d = wr_buffer_completed_q;
 
-  if (wr_in_state) begin
-    // If a valid write packet, add it to the buffer
-    for (int c=0; c < NrClusters; c++) begin
-      automatic axi_req_t req = axi_req_i[c];
-      if (req.w_valid & ~wrbuf_full_q[c]) begin
-        wrbuf_d[c][wr_shift_d[c] * ClusterAxiDataWidth +: ClusterAxiDataWidth] = req.w.data;
-        wrbuf_be_d[c][wr_shift_d[c] * ClusterAxiDataWidth/8 +: ClusterAxiDataWidth/8] = req.w.strb;
-        wr_shift_d[c] += 1'b1;
-        wrbuf_valid[c] = 1'b1;
-        if (wr_shift_q[c] == 1'b1) begin
-          wrbuf_full[c] = 1'b1;
-          wr_shift_d[c] = 1'b0;
-        end
-      end
-    end
+  if (wr_op == VSE) begin
     
-    // We take data from half of the clusters and send a response
-    for (int c=0; c < (NrClusters/2); c++) begin
-      automatic int cluster = wrbuf_pnt_q + c;
+    ///// UNIT STRIDE STORES /////
 
-      // Check if we have 2 buffers filled for every cluster
-      // Or if the cluster has less number of elements, just check if we have something valid
-      // If neither, check if the cluster has nothing to send, i.e. it has lesser number of elements or no elements
-      // at all and has completed the instruction
-      // In this case, use wr_cluster_completed to send a fake valid signal
-      wr_out_valid &= (wrbuf_full[cluster] || 
-                      (wrbuf_valid[cluster] && (wr_tracker_q[wr_issue_pnt_q[0]].vl[wrbuf_pnt_q + c] <= 2))) 
-                       ? 1'b1 : wr_cluster_completed[cluster];
-      if (wrbuf_valid[cluster]) begin
-        // If have a valid data, assign it to the output
-        for (int b=0; b < 2; b++) begin
-          wr_out_ready &= axi_resp_i[c*2 + b].w_ready;
-          axi_req_buf_out[c*2 + b].w.data = wrbuf_d   [cluster][b*ClusterAxiDataWidth   +: ClusterAxiDataWidth  ];
-          axi_req_buf_out[c*2 + b].w.strb = wrbuf_be_d[cluster][b*ClusterAxiDataWidth/8 +: ClusterAxiDataWidth/8];
+    if (wr_datapath == BUFFER) begin
+  
+      ///// 64b precision     /////
+
+      // If a valid write packet, add it to the buffer
+      for (int c=0; c < NrClusters; c++) begin
+        automatic axi_req_t req = axi_req_i[c];
+        if (req.w_valid & ~wrbuf_full_q[c]) begin
+          wrbuf_d[c][wr_shift_d[c] * ClusterAxiDataWidth +: ClusterAxiDataWidth] = req.w.data;
+          wrbuf_be_d[c][wr_shift_d[c] * ClusterAxiDataWidth/8 +: ClusterAxiDataWidth/8] = req.w.strb;
+          wr_shift_d[c] += 1'b1;
+          wrbuf_valid[c] = 1'b1;
+          if (wr_shift_q[c] == 1'b1) begin
+            wrbuf_full[c] = 1'b1;
+            wr_shift_d[c] = 1'b0;
+          end
         end
       end
-    end
-
-    // If a valid handshake, if the Global ld-st stage is ready to receive data on all ports
-    if (wr_out_ready & wr_out_valid) begin
-      automatic logic [$clog2(NrClusters*ClusterAxiDataWidth/8):0] nelem = NrLanes;
       
-      // For a valid handshake set valid to 1
-      // All interfaces are send together in a synchronized way
-      for (int c=0; c<NrClusters; c++) begin
-        axi_req_buf_out[c].w_valid = 1'b1;
+      // We take data from half of the clusters and send a response
+      for (int c=0; c < (NrClusters/2); c++) begin
+        automatic int cluster = wrbuf_pnt_q + c;
+
+        // Check if we have 2 buffers filled for every cluster
+        // Or if the cluster has less number of elements, just check if we have something valid
+        // If neither, check if the cluster has nothing to send, i.e. it has lesser number of elements or no elements
+        // at all and has completed the instruction
+        // In this case, use wr_cluster_completed to send a fake valid signal
+        wr_out_valid &= (wrbuf_full[cluster] || 
+                        (wrbuf_valid[cluster] && (wr_tracker_q[wr_issue_pnt_q[0]].vl[wrbuf_pnt_q + c] <= 2))) 
+                        ? 1'b1 : wr_cluster_completed[cluster];
+        if (wrbuf_valid[cluster]) begin
+          // If have a valid data, assign it to the output
+          for (int b=0; b < 2; b++) begin
+            wr_out_ready &= axi_resp_i[c*2 + b].w_ready;
+            axi_req_buf_out[c*2 + b].w.data = wrbuf_d   [cluster][b*ClusterAxiDataWidth   +: ClusterAxiDataWidth  ];
+            axi_req_buf_out[c*2 + b].w.strb = wrbuf_be_d[cluster][b*ClusterAxiDataWidth/8 +: ClusterAxiDataWidth/8];
+          end
+        end
       end
 
-      // Next we want to take data from the rest of the clusters
-      wrbuf_pnt_d = wrbuf_pnt_q + (NrClusters/NumBuffers);
+      // If a valid handshake, if the Global ld-st stage is ready to receive data on all ports
+      if (wr_out_ready & wr_out_valid) begin
+        automatic logic [$clog2(NrClusters*ClusterAxiDataWidth/8):0] nelem = NrLanes;
+        
+        // For a valid handshake set valid to 1
+        // All interfaces are send together in a synchronized way
+        for (int c=0; c<NrClusters; c++) begin
+          axi_req_buf_out[c].w_valid = 1'b1;
+        end
+
+        // Next we want to take data from the rest of the clusters
+        wrbuf_pnt_d = wrbuf_pnt_q + (NrClusters/NumBuffers);
+        
+        for (int c=0; c < (NrClusters/NumBuffers); c++) begin
+          // Since data from the buffer has been used, set buffer not valid
+          wrbuf_valid[wrbuf_pnt_q + c] = 1'b0;
+          wrbuf_be_d[wrbuf_pnt_q + c] = '0;
+          wrbuf_full [wrbuf_pnt_q + c] = 1'b0;
+          wr_tracker_d[wr_issue_pnt_q[0]].len[wrbuf_pnt_q + c] -= 2;
+
+          if (wr_tracker_q[wr_issue_pnt_q[0]].vl[wrbuf_pnt_q + c] <= nelem) begin 
+            // If this is the last data sent from the cluster
+            // start writing from offset of 0
+            wr_tracker_d[wr_issue_pnt_q[0]].vl[wrbuf_pnt_q + c] = '0;
+            wr_shift_d[(wrbuf_pnt_q + c)] = '0;
+            
+            // Since cluster 0 always has the most elements, just set once for cluster0
+            if (c==0)
+              wr_buffer_completed_d[wrbuf_pnt_q >> $clog2(NrClusters/2)] = 1'b1;
+
+          end else begin 
+            wr_tracker_d[wr_issue_pnt_q[0]].vl[wrbuf_pnt_q + c] -= nelem;
+          end
+        end
+
+        // If the instruction has been completed
+        // Or if there are less elements that the second buffer is not used
+        if ((&wr_buffer_completed_d) || 
+            (wr_buffer_completed_d == 2'b01 && wr_tracker_d[wr_issue_pnt_q[0]].second_buffer_unused)) begin
+            wr_buffer_completed_d = '0;
+            wrbuf_pnt_d = '0;
+            axi_req_buf_out[0].w.last = 1'b1;
+          end
+      end
+
+      // If the last cluster sends the data, remove request from tracker
+      if (axi_req_buf_out[0].w_valid & axi_req_buf_out[0].w.last) begin
+        for (int s=0; s < NumStages ; s++) begin
+          wr_issue_pnt_d[s] = (wr_issue_pnt_q[s] == NumTrackers-1) ? '0 : wr_issue_pnt_q[s] + 1;
+          wr_tracker_d[wr_issue_pnt_q[s]].shuffle_en = '0;
+          wr_tracker_d[wr_issue_pnt_q[s]].datapath = SHUFFLE;
+        end
+        wr_cnt_d -= 1'b1;
+      end
+    end else begin
+
+      ///// UNIT STRIDE STORES /////
+      ///// 8/16/32 bit precisions /////
+
+      // Update vl tracked for every write packet received from clusters
+      // All clusters synchronized, use only cluster 0 for handshaking
+      for (int c=0; c <NrClusters; c++) begin
+        if (axi_resp_o[c].w_ready & axi_req_i[c].w_valid) begin
+          automatic logic [$clog2(NrClusters*ClusterAxiDataWidth/8):0] nelem = (ClusterAxiDataWidth/8) >> wr_tracker_q[wr_issue_pnt_q[0]].vew;
+          // wr_tracker_d[wr_issue_pnt_q[0]].vl[c] -= (wr_tracker_q[wr_issue_pnt_q[0]].vl[c] >= nelem) ? nelem : '0;
+          wr_tracker_d[wr_issue_pnt_q[0]].len[c] -= 1;
+          if (wr_tracker_q[wr_issue_pnt_q[0]].vl[c] <= nelem) begin
+            wr_tracker_d[wr_issue_pnt_q[0]].vl[c] = 0;
+          end else begin
+            wr_tracker_d[wr_issue_pnt_q[0]].vl[c] -= nelem;
+          end
+        end
+      end
+    end
+    // For non-{VSXE, VSSE} operations, always use cluster 0
+    cluster_w_d = '0;
+    lane_w_d = '0;
+  end else if (wr_op inside {VSXE, VSSE}) begin
+
+    // Update cluster and lane pointers for write data when data is received for VSXE/VSSE operations
+    if (axi_req_i[cluster_w_q].w_valid && axi_resp_o[cluster_w_q].w_ready) begin
+      automatic logic [NrClusters-1:0] cluster_completed;
       
-      for (int c=0; c < (NrClusters/NumBuffers); c++) begin
-        // Since data from the buffer has been used, set buffer not valid
-        wrbuf_valid[wrbuf_pnt_q + c] = 1'b0;
-        wrbuf_be_d[wrbuf_pnt_q + c] = '0;
-        wrbuf_full [wrbuf_pnt_q + c] = 1'b0;
-        wr_tracker_d[wr_issue_pnt_q[0]].len[wrbuf_pnt_q + c] -= 2;
-
-        if (wr_tracker_q[wr_issue_pnt_q[0]].vl[wrbuf_pnt_q + c] <= nelem) begin 
-          // If this is the last data sent from the cluster
-          // start writing from offset of 0
-          wr_tracker_d[wr_issue_pnt_q[0]].vl[wrbuf_pnt_q + c] = '0;
-          wr_shift_d[(wrbuf_pnt_q + c)] = '0;
-          
-          // Since cluster 0 always has the most elements, just set once for cluster0
-          if (c==0)
-            wr_buffer_completed_d[wrbuf_pnt_q >> $clog2(NrClusters/2)] = 1'b1;
-
-        end else begin 
-          wr_tracker_d[wr_issue_pnt_q[0]].vl[wrbuf_pnt_q + c] -= nelem;
-        end
-      end
-
-      // If the instruction has been completed
-      // Or if there are less elements that the second buffer is not used
-      if ((&wr_buffer_completed_d) || 
-          (wr_buffer_completed_d == 2'b01 && wr_tracker_d[wr_issue_pnt_q[0]].second_buffer_unused)) begin
-          wr_buffer_completed_d = '0;
-          wrbuf_pnt_d = '0;
-          axi_req_buf_out[0].w.last = 1'b1;
-        end
-    end
-
-    // If the last cluster sends the data, remove request from tracker
-    if (axi_req_buf_out[0].w_valid & axi_req_buf_out[0].w.last) begin
-      for (int s=0; s < NumStages ; s++) begin
-        wr_issue_pnt_d[s] = (wr_issue_pnt_q[s] == NumTrackers-1) ? '0 : wr_issue_pnt_q[s] + 1;
-        wr_tracker_d[wr_issue_pnt_q[s]].shuffle_en = '0;
-        wr_tracker_d[wr_issue_pnt_q[s]].datapath = SHUFFLE;
-      end
-      wr_cnt_d -= 1'b1;
-    end
-  end else begin
-
-    // Update vl tracked for every write packet received from clusters
-    // All clusters synchronized, use only cluster 0 for handshaking
-    for (int c=0; c <NrClusters; c++) begin
-      if (axi_resp_o[c].w_ready & axi_req_i[c].w_valid) begin
-        automatic logic [$clog2(NrClusters*ClusterAxiDataWidth/8):0] nelem = (ClusterAxiDataWidth/8) >> wr_tracker_q[wr_issue_pnt_q[0]].vew;
-        // wr_tracker_d[wr_issue_pnt_q[0]].vl[c] -= (wr_tracker_q[wr_issue_pnt_q[0]].vl[c] >= nelem) ? nelem : '0;
-        wr_tracker_d[wr_issue_pnt_q[0]].len[c] -= 1;
-        if (wr_tracker_q[wr_issue_pnt_q[0]].vl[c] <= nelem) begin
-          wr_tracker_d[wr_issue_pnt_q[0]].vl[c] = 0;
+      // If we have processed NrLanes data beats and have more data to process, move to next cluster
+      lane_w_d = lane_w_q + 1;
+      if (lane_w_q == NrLanes - 1) begin
+        lane_w_d = '0;
+        if (cluster_w_q == NrClusters - 1) begin
+          cluster_w_d = '0;
         end else begin
-          wr_tracker_d[wr_issue_pnt_q[0]].vl[c] -= nelem;
+          cluster_w_d = cluster_w_q + 1;
         end
+      end
+
+      // Upate the wr tracker for all the stages
+      // reduced the wr tracker counter
+      wr_tracker_d[wr_issue_pnt_q[0]].vl[cluster_w_q] -= 1;
+      for (int c=0; c<NrClusters; c++) begin
+        cluster_completed[c] = (wr_tracker_d[wr_issue_pnt_q[0]].vl[c] == 0);
+      end
+      if (&cluster_completed) begin
+        wr_cnt_d -= 1'b1;
+        for (int i=0; i<NumStages; i++) begin
+          wr_issue_pnt_d[i] = (wr_issue_pnt_q[i] == NumTrackers-1) ? '0 : wr_issue_pnt_q[i] + 1;
+        end
+        cluster_w_d = '0;
+        lane_w_d = '0;
       end
     end
   end
-
 end
 
 /// Output input interface assignments
 // Handle Response path
 for (genvar c=0; c < NrClusters; c++) begin  
   // Bypass the registers for signals other than R channel
-  assign axi_resp_o[c].aw_ready = axi_resp_i[c].aw_ready && !wr_full;
+  assign axi_resp_o[c].aw_ready = ((cluster_metadata_i[c].op inside {VSXE, VSSE}) ? (c==cluster_aw_q) ? 1'b1 : 1'b0 : 1'b1) && axi_resp_i[c].aw_ready && !wr_full;
 
-  // If indexed load send ready only to one of the clusters
-  assign axi_resp_o[c].ar_ready = ((cluster_metadata_i[c].op == VLXE) ? (c==cluster_ar_q) ? 1'b1 : 1'b0 : axi_resp_i[c].ar_ready) && !rd_full;
+  // If indexed/strided load send ready only to one of the clusters
+  assign axi_resp_o[c].ar_ready = ((cluster_metadata_i[c].op inside {VLXE, VLSE}) ? (c==cluster_ar_q) ? 1'b1 : 1'b0 : 1'b1) && axi_resp_i[c].ar_ready && !rd_full;
   
   assign axi_resp_o[c].b_valid = axi_resp_i[c].b_valid;
   assign axi_resp_o[c].b = axi_resp_i[c].b;
@@ -798,40 +874,47 @@ for (genvar c=0; c < NrClusters; c++) begin
   // Reads  
   assign r_data_in[0][c] = (rd_datapath == BUFFER) ? '0 : axi_resp_i[c].r;             // Copy input resp to first stage
 
-  // Take resp from the shuffle or the buffer datapath as necessary
+  // Take resp from the shuffle or the buffer datapath as necessary, currently prioritize shuffle path
+  // Usually responses from both shuffle and buffer paths do not exist simutaneously
   assign axi_resp_o[c].r = r_valid_o[c] ? r_data_out[NumStages-1][c] : axi_resp_buf_out[c].r;  // Copy output resp from last stage
   assign axi_resp_o[c].r_valid = r_valid_o[c] ? ((rd_tracker_q[rd_issue_pnt_q[NumStages-1]].vl[c] == 0) ? 1'b0 : 1'b1) : axi_resp_buf_out[c].r_valid;
   
   // Writes
-  assign axi_resp_o[c].w_ready = wr_in_state ? ~wrbuf_full_q[c] : w_ready_o[c];          // Copy ready from stream join output to response
+  assign axi_resp_o[c].w_ready = (wr_op inside {VSXE, VSSE}) ? ((c == cluster_w_q) ? axi_resp_i[c].w_ready : 1'b0) : (wr_datapath ? ~wrbuf_full_q[c] : w_ready_o[c]);          // Copy ready from stream join output to response
 
 end
 
 // Valid input signal to use shuffle datapath
-assign r_valid[0]   = (rd_datapath == BUFFER) ? 1'b0 : (rd_op == VLXE) ? 1'b0 : axi_resp_i[0].r_valid;
+assign r_valid[0]   = (rd_datapath == BUFFER) ? 1'b0 : (rd_op inside {VLXE, VLSE}) ? 1'b0 : axi_resp_i[0].r_valid;
 
 // Handle Request path
 for (genvar c=0; c < NrClusters; c++) begin
   assign axi_req_o[c].aw = axi_req_i[c].aw;
-  assign axi_req_o[c].aw_valid = axi_req_i[c].aw_valid;
+  assign axi_req_o[c].aw_valid = ((cluster_metadata_i[c].op inside {VSXE, VSSE}) ? ((c==cluster_aw_q) ? 1'b1 : 1'b0) : 1'b1) && axi_req_i[c].aw_valid && !wr_full;
   assign axi_req_o[c].ar = axi_req_i[c].ar;
-  assign axi_req_o[c].ar_valid = ((cluster_metadata_i[c].op == VLXE) ? ((c==cluster_ar_q) ? axi_req_i[c].ar_valid : 1'b0) : axi_req_i[c].ar_valid) && !rd_full;
+  assign axi_req_o[c].ar_valid = ((cluster_metadata_i[c].op inside {VLXE, VLSE}) ? ((c==cluster_ar_q) ? 1'b1 : 1'b0) : 1'b1) && axi_req_i[c].ar_valid && !rd_full;
   assign axi_req_o[c].b_ready = axi_req_i[c].b_ready;
   
   // Reads
-  assign axi_req_o[c].r_ready = ((rd_datapath == BUFFER) ? (rd_op == VLXE ? axi_req_i[c].r_ready : r_ready_buf_q) : r_ready[0] ) & ~pending_resp;
+  assign axi_req_o[c].r_ready = ((rd_datapath == BUFFER) ? ((rd_op inside {VLXE, VLSE}) ? axi_req_i[c].r_ready : r_ready_buf_q) : r_ready[0] ) & ~pending_resp;
   assign r_ready_i[c] = axi_req_i[c].r_ready;           // From input request, get ready inputs to stream fork
 
   // Writes
-  assign w_data_in[0][c] = wr_in_state ? '0 : axi_req_i[c].w_valid ? axi_req_i[c].w : '0;              // Copy input write data to first shuffle stage
+  assign w_data_in[0][c] = (wr_datapath ==  BUFFER) ? '0 : 
+                            axi_req_i[c].w_valid ? axi_req_i[c].w : '0;              // Copy input write data to first shuffle stage
 
   // If other cluster have completed writes, and cluster 0 has a write packet remaining, assume a fake write valid to the stream fork module
   assign wr_cluster_completed[c] = (wr_cnt_q > 0) && (wr_tracker_q[wr_issue_pnt_q[0]].vl[c] == '0);
   
-  assign w_valid_i[c]    = (wr_cluster_completed[c] & axi_req_i[0].w_valid) ? 1'b1 : wr_in_state? 1'b0 : axi_req_i[c].w_valid;   // Copy valid signals to stream join
+  // wvalids for the shuffle datapath
+  // For VSXE/VSSE, not using the shuffle datapath
+  assign w_valid_i[c]    = (wr_op inside {VSXE, VSSE}) ? 1'b0 : 
+                           ((wr_cluster_completed[c] & axi_req_i[0].w_valid) ? 1'b1 : (wr_datapath == BUFFER)? 1'b0 : axi_req_i[c].w_valid);   // Copy valid signals to stream join
    
-  assign axi_req_o[c].w       = w_valid[NumStages-1] ? w_data_out[NumStages-1][c] : axi_req_buf_out[c].w;   // Copy last stage data to req output
-  assign axi_req_o[c].w_valid = w_valid[NumStages-1] ? 1'b1  : axi_req_buf_out[c].w_valid;   // valid signal is the output valid of stream join
+  assign axi_req_o[c].w       = (wr_op inside {VSXE, VSSE}) ? axi_req_i[c].w :
+                                (w_valid[NumStages-1] ? w_data_out[NumStages-1][c] : axi_req_buf_out[c].w);   // Copy last stage data to req output
+  assign axi_req_o[c].w_valid = (wr_op inside {VSXE, VSSE}) ? ((c == cluster_w_q) ? axi_req_i[c].w_valid : 1'b0) : 
+                                (w_valid[NumStages-1] ? 1'b1  : axi_req_buf_out[c].w_valid);   // valid signal is the output valid of stream join
 
 end
 assign w_ready[NumStages-1] = axi_resp_i[0].w_ready; // The Global Ld-St is ready to receive write packets together. Hence using only cluster-0 's w_ready.

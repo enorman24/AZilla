@@ -28,6 +28,7 @@ module vstu import ara_pkg::*; import rvv_pkg::*; #(
   )(
     input  logic                           clk_i,
     input  logic                           rst_ni,
+    input  id_cluster_t                    cluster_id_i,
     // Memory interface
     output axi_w_t                         axi_w_o,
     output logic                           axi_w_valid_o,
@@ -206,11 +207,6 @@ module vstu import ara_pkg::*; import rvv_pkg::*; #(
     // - The AXI subsystem is ready to accept this W beat
     if (vinsn_issue_valid && &stu_operand_valid && (vinsn_issue_q.vm || (|mask_valid_i)) &&
         axi_addrgen_req_valid_i && !axi_addrgen_req_i.is_load && axi_w_ready_i) begin
-      // Bytes valid in the current W beat
-      automatic shortint unsigned lower_byte = beat_lower_byte(axi_addrgen_req_i.addr,
-        axi_addrgen_req_i.size, axi_addrgen_req_i.len, BURST_INCR, AxiDataWidth/8, len_q);
-      automatic shortint unsigned upper_byte = beat_upper_byte(axi_addrgen_req_i.addr,
-        axi_addrgen_req_i.size, axi_addrgen_req_i.len, BURST_INCR, AxiDataWidth/8, len_q);
 
       // Account for the issued bytes
       // How many bytes are valid in this VRF word
@@ -218,21 +214,23 @@ module vstu import ara_pkg::*; import rvv_pkg::*; #(
       // How many bytes are valid in this instruction
       automatic vlen_t vinsn_valid_bytes = issue_cnt_q - vrf_pnt_q;
       // How many bytes are valid in this AXI word
-      automatic vlen_t axi_valid_bytes   = upper_byte - lower_byte + 1;
+      automatic vlen_t axi_valid_bytes   = AxiDataWidth/8;
 
       // How many bytes are we committing?
       automatic logic [idx_width(DataWidth*NrLanes/8):0] valid_bytes;
       valid_bytes = issue_cnt_q < NrLanes * 8     ? vinsn_valid_bytes : vrf_valid_bytes;
       valid_bytes = valid_bytes < axi_valid_bytes ? valid_bytes       : axi_valid_bytes;
 
+      if (vinsn_issue_q.op inside {VSXE, VSSE}) valid_bytes = 1 << vinsn_issue_q.vtype.vsew;
+
       vrf_pnt_d = vrf_pnt_q + valid_bytes;
 
       // Copy data from the operands into the W channel
       for (int axi_byte = 0; axi_byte < AxiDataWidth/8; axi_byte++) begin
         // Is this byte a valid byte in the W beat?
-        if (axi_byte >= lower_byte && axi_byte <= upper_byte) begin
+        if (axi_byte >= 0 && axi_byte < valid_bytes) begin
           // Map axy_byte to the corresponding byte in the VRF word (sequential)
-          automatic int vrf_seq_byte = axi_byte - lower_byte + vrf_pnt_q;
+          automatic int vrf_seq_byte = axi_byte + vrf_pnt_q;
           // And then shuffle it
           automatic int vrf_byte     = shuffle_index(vrf_seq_byte, NrLanes, vinsn_issue_q.eew_vs1);
 
@@ -356,5 +354,74 @@ module vstu import ara_pkg::*; import rvv_pkg::*; #(
       pe_resp_o <= pe_resp;
     end
   end
+
+  /****************************
+   *  Perfetto Trace Output   *
+   ****************************/
+
+`ifdef PERFETTO_TRACE
+`ifndef TARGET_SYNTHESIS
+`ifndef VERILATOR
+
+  int trace_fd;
+  string trace_fn;
+
+  logic [idx_width(VInsnQueueDepth)-1:0] trace_accept_pnt_prev;
+  logic trace_fd_opened;
+  logic trace_open_armed;
+
+  // verilog_lint: waive-start always-ff-non-blocking
+  always_ff @(posedge clk_i or negedge rst_ni) begin
+    if (!rst_ni) begin
+      trace_accept_pnt_prev <= '0;
+      trace_fd_opened <= 1'b0;
+      trace_open_armed <= 1'b0;
+      trace_fd <= 0;
+    end else begin
+      if (!trace_open_armed) begin
+        trace_open_armed <= 1'b1;
+      end else if (!trace_fd_opened) begin
+        $sformat(trace_fn, "trace_vstu_c%0d.csv", cluster_id_i);
+        trace_fd = $fopen(trace_fn, "w");
+        $fwrite(trace_fd, "phase,timestamp,cluster,insn_id,op,vl,vd,data,strb,last\n");
+        $display("[VSTU Tracer] Logging cluster %0d to %s", cluster_id_i, trace_fn);
+        trace_fd_opened <= 1'b1;
+      end
+
+      trace_accept_pnt_prev <= vinsn_queue_q.accept_pnt;
+
+      if (trace_fd_opened && (vinsn_queue_q.accept_pnt != trace_accept_pnt_prev)) begin
+        automatic pe_req_t accepted_vinsn = vinsn_queue_q.vinsn[trace_accept_pnt_prev];
+        $fwrite(trace_fd, "B,%0t,%0d,%0d,%s,%0d,%0d,,,\n",
+                $time, cluster_id_i,
+                accepted_vinsn.id, accepted_vinsn.op.name(),
+                accepted_vinsn.vl, accepted_vinsn.vd);
+      end
+
+      if (trace_fd_opened && axi_w_valid_o && axi_w_ready_i && vinsn_issue_valid) begin
+        $fwrite(trace_fd, "W,%0t,%0d,%0d,%s,%0d,%0d,%0h,%0h,%0b\n",
+                $time, cluster_id_i,
+                vinsn_issue_q.id, vinsn_issue_q.op.name(),
+                vinsn_issue_q.vl, vinsn_issue_q.vd,
+                axi_w_o.data, axi_w_o.strb, axi_w_o.last);
+      end
+
+      if (trace_fd_opened && store_complete_o && vinsn_commit_valid) begin
+        $fwrite(trace_fd, "E,%0t,%0d,%0d,%s,%0d,%0d,,,\n",
+                $time, cluster_id_i,
+                vinsn_commit.id, vinsn_commit.op.name(),
+                vinsn_commit.vl, vinsn_commit.vd);
+      end
+    end
+  end
+  // verilog_lint: waive-stop always-ff-non-blocking
+
+  final begin
+    $fclose(trace_fd);
+  end
+
+`endif
+`endif
+`endif
 
 endmodule : vstu

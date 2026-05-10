@@ -60,7 +60,7 @@ int main() {
 
   runtime = get_timer();
   
-  float performance = 35.0 * innerSize * channels / runtime;
+  float performance = 25.0 * innerSize * channels / runtime;
   printf("[sw-cycles]: %ld performance:%f\n", runtime, performance);
 
   return 0;

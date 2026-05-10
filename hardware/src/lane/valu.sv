@@ -21,6 +21,8 @@ module valu import ara_pkg::*; import rvv_pkg::*; import cf_math_pkg::idx_width;
     input  logic                         clk_i,
     input  logic                         rst_ni,
     input  logic[idx_width(NrLanes)-1:0] lane_id_i,
+    input  id_cluster_t                  cluster_id_i,
+    input  num_cluster_t                 num_clusters_i,
     // Interface with Dispatcher
     output logic                         vxsat_flag_o,
     input  vxrm_t                        alu_vxrm_i,
@@ -46,6 +48,8 @@ module valu import ara_pkg::*; import rvv_pkg::*; import cf_math_pkg::idx_width;
     input  elen_t                        sldu_operand_i,
     input  logic                         sldu_alu_valid_i,
     output logic                         sldu_alu_ready_o,
+    input  logic                         sldu_red_pending_i,
+    input logic                          sldu_red_completed_i,
     // Interface with the Mask unit
     output elen_t                        mask_operand_o,
     output logic                         mask_operand_valid_o,
@@ -264,8 +268,7 @@ module valu import ara_pkg::*; import rvv_pkg::*; import cf_math_pkg::idx_width;
   // so on. In the end, the result is collected in Lane 0 and the last SIMD reduction is performed.
   // The following function determines how many partial results this lane must process during the
   // inter-lane reduction.
-  typedef logic [idx_width(NrLanes/2):0] reduction_rx_cnt_t;
-  reduction_rx_cnt_t reduction_rx_cnt_d, reduction_rx_cnt_q;
+  typedef logic [idx_width(MaxNrClusters*NrLanes/2):0] reduction_rx_cnt_t;
   reduction_rx_cnt_t simd_red_cnt_max_d, simd_red_cnt_max_q;
 
   // Use this function to assign a counter value to each lane if you can use in-lane parameters with your flow
@@ -298,9 +301,6 @@ module valu import ara_pkg::*; import rvv_pkg::*; import cf_math_pkg::idx_width;
     endcase
   endfunction: reduction_rx_cnt_init
 
-  // Count how many transactions we must do in total to complete the reduction operation
-  logic [idx_width($clog2(NrLanes)+1):0] sldu_transactions_cnt_d, sldu_transactions_cnt_q;
-
   // Counter to drive SIMD reductions
   logic [1:0] simd_red_cnt_d, simd_red_cnt_q;
 
@@ -316,6 +316,8 @@ module valu import ara_pkg::*; import rvv_pkg::*; import cf_math_pkg::idx_width;
   // When the workload is unbalanced, some lanes can start the operation with a zeroed commit counter
   // In this case, the ALU should NOT commit until the inter-lanes phase is over
   logic prevent_commit;
+
+  logic sldu_red_completed_d, sldu_red_completed_q;
 
   // Input multiplexers.
   elen_t simd_red_operand;
@@ -410,8 +412,6 @@ module valu import ara_pkg::*; import rvv_pkg::*; import cf_math_pkg::idx_width;
 
     first_op_d              = first_op_q;
     simd_red_cnt_d          = simd_red_cnt_q;
-    reduction_rx_cnt_d      = reduction_rx_cnt_q;
-    sldu_transactions_cnt_d = sldu_transactions_cnt_q;
     alu_red_valid_o         = 1'b0;
     sldu_alu_ready_d        = 1'b0;
     simd_red_cnt_max_d      = simd_red_cnt_max_q;
@@ -434,6 +434,8 @@ module valu import ara_pkg::*; import rvv_pkg::*; import cf_math_pkg::idx_width;
 
     // Don't prevent commit by default
     prevent_commit = 1'b0;
+
+    sldu_red_completed_d = sldu_red_completed_q;
 
     ////////////////////////////////////////
     //  Write data into the result queue  //
@@ -600,27 +602,26 @@ module valu import ara_pkg::*; import rvv_pkg::*; import cf_math_pkg::idx_width;
           // If the workload is unbalanced and some lanes already have commit_cnt == '0,
           // delay the commit until we are over with the inter-lanes phase
           prevent_commit = 1'b1;
+
+          sldu_red_completed_d = sldu_red_completed_i | sldu_red_completed_q;
+
           // This unit should either still participate to the reduction or
           // just handshake the SLDU to sync with the still active lanes
           if (sldu_alu_valid_q) begin
             // Handshake the SLDU
             sldu_alu_ready_d = 1'b1;
-            // Count the successful transaction with the SLDU
-            sldu_transactions_cnt_d = sldu_transactions_cnt_q - 1;
-            // Is this lane active?
-            if (reduction_rx_cnt_q != '0) begin
-              // Issue the operation
-              valu_valid = 1'b1;
-              // Write the result
-              result_queue_d[result_queue_write_pnt_q].wdata = valu_result;
-              // One reduction step less for this lane
-              reduction_rx_cnt_d = reduction_rx_cnt_q - 1;
-            end
-            // Is this the last cycle for the INTER-LANES phase?
-            if (sldu_transactions_cnt_q == 1) begin
-              // Lane 0 is receiving an already processed result
-              // and needs to SIMD-reduce the result
-              if (lane_id_i == '0) begin
+            // Issue the operation
+            valu_valid = 1'b1;
+            // Write the result
+            result_queue_d[result_queue_write_pnt_q].wdata = valu_result;
+
+            if (!sldu_red_completed_q) begin
+              // We have more inter-lanes / inter-cluster reduction transactions to do
+              alu_state_d = INTER_LANES_REDUCTION_TX;
+            end else begin
+              // If this was the last transaction with the SLDU
+              // lane 0 of cluster 0 goes to SIMD_REDUCTION, the other lanes can finish
+              if (lane_id_i==0 && cluster_id_i==0) begin
                 result_queue_d[result_queue_write_pnt_q].wdata = sldu_operand_q;
                 unique case (vinsn_commit.vtype.vsew)
                     EW8 : simd_red_cnt_max_d = 2'd3;
@@ -629,15 +630,21 @@ module valu import ara_pkg::*; import rvv_pkg::*; import cf_math_pkg::idx_width;
                     EW64: simd_red_cnt_max_d = 2'd0;
                 endcase
                 simd_red_cnt_d = '0;
+                sldu_red_completed_d = 1'b0;
                 alu_state_d = SIMD_REDUCTION;
-              // The other lanes can commit
-              end else begin
-                // From this lane's perspective, the reduction is over
+              end else if (cluster_id_i == '0) begin
+                // Rest of the cluster 0 lanes commit
+                sldu_red_completed_d = 1'b0;
                 alu_state_d = LN0_REDUCTION_COMMIT;
+              end else begin
+                // Rest all clusters go one last time to TX to send the reduced result
+                alu_state_d = INTER_LANES_REDUCTION_TX;
               end
-            end else begin
-              // Send the result to the SLDU during next cycle
-              alu_state_d = INTER_LANES_REDUCTION_TX;
+            end
+          end else begin
+            if (sldu_red_completed_q) begin
+              sldu_red_completed_d = 1'b0;
+              alu_state_d = LN0_REDUCTION_COMMIT;
             end
           end
         end
@@ -699,9 +706,6 @@ module valu import ara_pkg::*; import rvv_pkg::*; import cf_math_pkg::idx_width;
                 end
               end
 
-              // Commit and give the done to the main sequencer
-              commit_cnt_d = '0;
-
               // Bump pointers and counters of the result queue
               result_queue_valid_d[result_queue_write_pnt_q] = 1'b1;
               result_queue_cnt_d += 1;
@@ -709,6 +713,8 @@ module valu import ara_pkg::*; import rvv_pkg::*; import cf_math_pkg::idx_width;
                 result_queue_write_pnt_d = 0;
               else
                 result_queue_write_pnt_d = result_queue_write_pnt_q + 1;
+
+              alu_state_d = NO_REDUCTION;
             end
           end
         end
@@ -749,9 +755,14 @@ module valu import ara_pkg::*; import rvv_pkg::*; import cf_math_pkg::idx_width;
 
       // Decrement the counter of remaining vector elements waiting to be written
       // Don't do it in case of a reduction
-      if (!is_reduction(vinsn_commit.op))
+      if (!is_reduction(vinsn_commit.op)) begin
         commit_cnt_d = commit_cnt_q - (1 << (int'(EW64) - vinsn_commit.vtype.vsew));
-      if (commit_cnt_q < (1 << (int'(EW64) - vinsn_commit.vtype.vsew))) commit_cnt_d = '0;
+        if (commit_cnt_q < (1 << (int'(EW64) - vinsn_commit.vtype.vsew)))
+          commit_cnt_d = '0;
+      end else begin
+        // Reduction result committed
+        commit_cnt_d = '0;
+      end
     end
 
     // Finished committing the results of a vector instruction
@@ -781,9 +792,6 @@ module valu import ara_pkg::*; import rvv_pkg::*; import cf_math_pkg::idx_width;
       if (is_reduction(vinsn_queue_q.vinsn[vinsn_queue_d.issue_pnt].op) && (vinsn_queue_d.issue_cnt != '0)) begin
         // Initialize reduction-related sequential elements
         first_op_d              = 1'b1;
-        reduction_rx_cnt_d      = reduction_rx_cnt_init(NrLanes, lane_id_i);
-        sldu_transactions_cnt_d = $clog2(NrLanes) + 1;
-
         alu_state_d = INTRA_LANE_REDUCTION;
       end else begin
         alu_state_d = NO_REDUCTION;
@@ -804,14 +812,13 @@ module valu import ara_pkg::*; import rvv_pkg::*; import cf_math_pkg::idx_width;
       // Initialize counters and alu state if the instruction queue was empty
       // and the lane is not reducing
       if ((vinsn_queue_d.issue_cnt == '0) && !prevent_commit) begin
-        alu_state_d = is_reduction(vfu_operation_i.op) ? INTRA_LANE_REDUCTION : NO_REDUCTION;
+        // INTRA_LANE_REDUCTION state needs the result queue
+        // Start the reduction only if the commit queue (so, the result queue, too) is empty
+        alu_state_d = is_reduction(vfu_operation_i.op) && (vinsn_queue_d.commit_cnt == '0) ? INTRA_LANE_REDUCTION : NO_REDUCTION;
         // The next will be the first operation of this instruction
         // This information is useful for reduction operation
         // Initialize reduction-related sequential elements
         first_op_d              = 1'b1;
-        reduction_rx_cnt_d      = reduction_rx_cnt_init(NrLanes, lane_id_i);
-        sldu_transactions_cnt_d = $clog2(NrLanes) + 1;
-
         issue_cnt_d = vfu_operation_i.vl;
         if (!(vfu_operation_i.op inside {[VMANDNOT:VMXNOR]}))
           issue_cnt_d = vfu_operation_i.vl;
@@ -853,22 +860,20 @@ module valu import ara_pkg::*; import rvv_pkg::*; import cf_math_pkg::idx_width;
       narrowing_select_q      <= 1'b0;
       simd_red_cnt_q          <= '0;
       alu_state_q             <= NO_REDUCTION;
-      reduction_rx_cnt_q      <= '0;
       first_op_q              <= 1'b0;
-      sldu_transactions_cnt_q <= '0;
       simd_red_cnt_max_q      <= '0;
       alu_vxsat_q             <= '0;
+      sldu_red_completed_q    <= 1'b0;
     end else begin
       issue_cnt_q             <= issue_cnt_d;
       commit_cnt_q            <= commit_cnt_d;
       narrowing_select_q      <= narrowing_select_d;
       simd_red_cnt_q          <= simd_red_cnt_d;
       alu_state_q             <= alu_state_d;
-      reduction_rx_cnt_q      <= reduction_rx_cnt_d;
       first_op_q              <= first_op_d;
-      sldu_transactions_cnt_q <= sldu_transactions_cnt_d;
       simd_red_cnt_max_q      <= simd_red_cnt_max_d;
       alu_vxsat_q             <= alu_vxsat_d;
+      sldu_red_completed_q    <= sldu_red_completed_d;
     end
   end
 

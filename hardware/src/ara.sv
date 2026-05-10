@@ -56,6 +56,11 @@ module ara import ara_pkg::*; import rvv_pkg::*; #(
     output logic                    idx_completed_o,
     input  logic                    idx_completed_sync_i,
 
+    // Synchronization of reduction operations
+    output logic                    sldu_completed_o,
+    output logic                    sldu_pending_o,
+    input  logic                    sldu_completed_sync_i,
+
     // Interface with Ring Interconnect
     output remote_data_t ring_data_o,
     output logic ring_valid_o, 
@@ -218,10 +223,13 @@ module ara import ara_pkg::*; import rvv_pkg::*; #(
   logic      [NrLanes-1:0]                     stu_operand_ready;
   // Slide unit/address generation operands
   elen_t     [NrLanes-1:0]                     sldu_addrgen_operand;
+  elen_t     [NrLanes-1:0]                     sldu_operand;
   target_fu_e[NrLanes-1:0]                     sldu_addrgen_operand_target_fu;
   logic      [NrLanes-1:0]                     sldu_addrgen_operand_valid;
+  logic      [NrLanes-1:0]                     sldu_red_operand_valid;
   logic      [NrLanes-1:0]                     sldu_operand_ready;
-  sldu_mux_e                                   sldu_mux_sel;
+  sldu_mux_e                                   sldu_issue_mux_sel;
+  sldu_mux_e                                   sldu_commit_mux_sel;
   logic                                        addrgen_operand_ready;
   logic      [NrLanes-1:0]                     sldu_red_valid;
 
@@ -242,6 +250,8 @@ module ara import ara_pkg::*; import rvv_pkg::*; #(
   strb_t     [NrLanes-1:0]                     sldu_result_be;
   logic      [NrLanes-1:0]                     sldu_result_gnt;
   logic      [NrLanes-1:0]                     sldu_result_final_gnt;
+  logic                                        sldu_red_pending;
+  logic                                        sldu_red_completed;
   // Mask Unit
   logic      [NrLanes-1:0]                     masku_result_req;
   vid_t      [NrLanes-1:0]                     masku_result_id;
@@ -289,6 +299,8 @@ module ara import ara_pkg::*; import rvv_pkg::*; #(
       .sldu_result_be_i                (sldu_result_be[lane]                ),
       .sldu_result_gnt_o               (sldu_result_gnt[lane]               ),
       .sldu_result_final_gnt_o         (sldu_result_final_gnt[lane]         ),
+      .sldu_red_pending_i              (sldu_red_pending                    ),
+      .sldu_red_completed_i            (sldu_red_completed                  ),
       // Interface with the load unit
       .ldu_result_req_i                (ldu_result_req[lane]                ),
       .ldu_result_addr_i               (ldu_result_addr[lane]               ),
@@ -303,10 +315,13 @@ module ara import ara_pkg::*; import rvv_pkg::*; #(
       .stu_operand_ready_i             (stu_operand_ready[lane]             ),
       // Interface with the slide/address generation unit
       .sldu_addrgen_operand_o          (sldu_addrgen_operand[lane]          ),
-      .sldu_addrgen_operand_target_fu_o(sldu_addrgen_operand_target_fu[lane]),
+      .sldu_operand_o                  (sldu_operand[lane]                  ),
       .sldu_addrgen_operand_valid_o    (sldu_addrgen_operand_valid[lane]    ),
+      .sldu_red_operand_valid_o        (sldu_red_operand_valid[lane]        ),
+      .sldu_addrgen_operand_target_fu_o(sldu_addrgen_operand_target_fu[lane]),
       .addrgen_operand_ready_i         (addrgen_operand_ready               ),
-      .sldu_mux_sel_i                  (sldu_mux_sel                        ),
+      .sldu_issue_mux_sel_i            (sldu_issue_mux_sel                  ),
+      .sldu_commit_mux_sel_i           (sldu_commit_mux_sel                 ),
       .sldu_operand_ready_i            (sldu_operand_ready[lane]            ),
       .sldu_red_valid_i                (sldu_red_valid[lane]                ),
       // Interface with the mask unit
@@ -350,6 +365,9 @@ module ara import ara_pkg::*; import rvv_pkg::*; #(
   ) i_vlsu (
     .clk_i                      (clk_i                                                 ),
     .rst_ni                     (rst_ni                                                ),
+    // Id
+    .cluster_id_i               (cluster_id_i                                          ),
+    .num_clusters_i             (num_clusters_i                                        ),
     // AXI memory interface
     .axi_req_o                  (axi_req_o                                             ),
     .axi_resp_i                 (axi_resp_i                                            ),
@@ -418,9 +436,10 @@ module ara import ara_pkg::*; import rvv_pkg::*; #(
     .pe_req_ready_o          (pe_req_ready[NrLanes+OffsetSlide]),
     .pe_resp_o               (pe_resp[NrLanes+OffsetSlide]     ),
     // Interface with the lanes
-    .sldu_operand_i          (sldu_addrgen_operand             ),
+    .sldu_operand_queue_valid_i  (sldu_addrgen_operand_valid   ),
+    .sldu_red_operand_valid_i    (sldu_red_operand_valid       ),
+    .sldu_operand_i          (sldu_operand                     ),
     .sldu_operand_target_fu_i(sldu_addrgen_operand_target_fu   ),
-    .sldu_operand_valid_i    (sldu_addrgen_operand_valid       ),
     .sldu_operand_ready_o    (sldu_operand_ready               ),
     .sldu_result_req_o       (sldu_result_req                  ),
     .sldu_result_addr_o      (sldu_result_addr                 ),
@@ -428,9 +447,13 @@ module ara import ara_pkg::*; import rvv_pkg::*; #(
     .sldu_result_be_o        (sldu_result_be                   ),
     .sldu_result_wdata_o     (sldu_result_wdata                ),
     .sldu_result_gnt_i       (sldu_result_gnt                  ),
-    .sldu_mux_sel_o          (sldu_mux_sel                     ),
+    .sldu_issue_mux_sel_o    (sldu_issue_mux_sel               ),
+    .sldu_commit_mux_sel_o   (sldu_commit_mux_sel              ),
     .sldu_red_valid_o        (sldu_red_valid                   ),
     .sldu_result_final_gnt_i (sldu_result_final_gnt            ),
+    .sldu_red_pending_o      (sldu_red_pending                 ),
+    .sldu_red_completed_o    (sldu_red_completed               ),
+    .sldu_completed_sync_i   (sldu_completed_sync_i            ),
     // Interface with the Mask unit
     .mask_i                  (mask                             ),
     .mask_valid_i            (mask_valid                       ),
@@ -444,6 +467,9 @@ module ara import ara_pkg::*; import rvv_pkg::*; #(
     .sldu_ring_valid_i       (ring_valid_i),
     .sldu_ring_ready_o       (ring_ready_o)
   );
+
+  assign sldu_completed_o = sldu_red_completed;
+  assign sldu_pending_o = sldu_red_pending;
 
   /////////////////
   //  Mask unit  //

@@ -1,8 +1,73 @@
 install
+.venv/
 .bender
 hardware/build
+hardware/build-*/
+hardware/deps/
 *.S
 *.o
 verdiLog
 novas.conf
 novas.rc
+
+# Simulation / benchmark run outputs
+runs/**
+!runs/**/
+!runs/**/benchmark-rows/**
+!runs/**/plots/**
+runs/**/*.log
+runs/**/*.rpt
+runs/**/*.vcd
+runs/**/*.fst
+runs/**/*.fsdb
+runs/**/*.vpd
+runs/**/*.jou
+runs/**/*.wdb
+benchmark-runs/
+benchmark_errors_*.rpt
+*.rpt
+
+# Generated benchmark variant directories
+apps/benchmarks_*/
+
+# Spike simulation artifacts
+*.o.spike
+apps/spike_runs/
+apps/riscv-tests/
+
+# EDA waveforms and logs
+*.vcd
+*.fst
+*.fsdb
+*.vpd
+*.log
+*.jou
+*.wdb
+
+# Python cache
+__pycache__/
+*.pyc
+
+# RISC-V disassembly traces
+*.dasm
+
+# Local Verilator binary symlink directory
+hardware/bin/
+
+# IDE settings
+.vscode/
+
+# AI agent instructions (local only)
+AGENTS.md
+
+# EDA synthesis generated files
+cva6_genus_files.tcl
+
+# Archive/scratch config directory
+archive_conf/
+
+# TVM generated artifacts
+tvm-apps/artifacts/
+
+# Local backup bundle
+araxl-backup.bundle

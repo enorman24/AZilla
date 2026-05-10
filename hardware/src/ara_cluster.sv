@@ -137,31 +137,12 @@ module ara_cluster import ara_pkg::*; import rvv_pkg::*;  #(
   localparam int idx_no_ring_cut_right[8] = '{0, 2, 4, 6, 8, 10, 12, 14};
 
   // Synchronization logic between clusters for indexed operations
-  
-  logic [NrClusters-1:0] idx_completed_d, idx_completed_q, idx_completed;
-  logic [NrClusters-1:0] idx_completed_shuffle_d, idx_completed_shuffle_q, idx_completed_shuffle;
   logic idx_completed_sync_all;
 
-  `FF(idx_completed_q, idx_completed_d, '0, clk_i, rst_ni)
-  `FF(idx_completed_shuffle_q, idx_completed_shuffle_d, '0, clk_i, rst_ni)
-
-  always_comb begin : p_sync_idx
-    idx_completed_d = idx_completed_q;
-    idx_completed_shuffle_d = idx_completed_shuffle_q;
-
-    idx_completed_d = idx_completed_q | idx_completed;
-    idx_completed_shuffle_d = idx_completed_shuffle_q | idx_completed_shuffle;
-    idx_completed_sync_all = 1'b0;
-
-    if ((idx_completed_q != '0) && (idx_completed_shuffle_q != '0)) begin
-      // If any cluster has completed, we can reset the synchronization signal for the next round
-      idx_completed_sync_all = (idx_completed_q == idx_completed_shuffle_q) ? 1'b1 : 1'b0;
-      if (idx_completed_sync_all) begin
-        idx_completed_d = '0;
-        idx_completed_shuffle_d = '0;
-      end
-    end
-  end
+  logic [NrClusters-1:0] sldu_completed, sldu_participating;
+  logic [NrClusters-1:0] sldu_completed_d, sldu_completed_q;
+  logic sldu_completed_all;
+  logic sldu_completed_all_q1, sldu_completed_all_q2;
 
   for (genvar cluster=0; cluster < NrClusters; cluster++) begin : p_cluster
       ara_macro #(
@@ -200,8 +181,13 @@ module ara_cluster import ara_pkg::*; import rvv_pkg::*;  #(
         .axi_resp_i         (ara_axi_resp[cluster]     ),
         .cluster_metadata_o (cluster_metadata[cluster] ),
 
-        .idx_completed_o     (idx_completed[cluster]         ),
-        .idx_completed_sync_i(idx_completed_sync_all         ), // TODO: check in BE if it is in critical path
+        // Synchronization for indexed operations and reductions
+        .idx_completed_o     (   /* unused */          ),
+        .idx_completed_sync_i(idx_completed_sync_all   ), // TODO: check in BE if it is in critical path
+
+        .sldu_completed_o      (sldu_completed[cluster]    ),
+        .sldu_pending_o        (sldu_participating[cluster]),
+        .sldu_completed_sync_i (sldu_completed_all_q2      ),
 
         // Ring
         .ring_data_r_i       (ring_data_l_cut        [cluster == NrClusters-1 ? 0 : cluster + 1]     ),
@@ -247,6 +233,32 @@ module ara_cluster import ara_pkg::*; import rvv_pkg::*;  #(
         );
         `FF(cluster_metadata_shuffle_cut[s+1][cluster], cluster_metadata_shuffle_cut[s][cluster], cluster_metadata_t'('0), clk_i, rst_ni)
       end
+  end
+
+  // Synchronization logic: wait for completion from all participating clusters
+  // Accumulate completed and pending clusters over time, clear when all done
+  // 2 pipeline stages on sldu_completed_all to relax timing in the cluster
+  always_comb begin
+    sldu_completed_d = sldu_completed_q | sldu_completed;
+
+    // Only check completion for participating clusters
+    sldu_completed_all = &(sldu_completed_d | ~sldu_participating);
+
+    if (sldu_completed_all) begin
+      sldu_completed_d = '0;
+    end
+  end
+
+  always_ff @(posedge clk_i or negedge rst_ni) begin
+    if (!rst_ni) begin
+      sldu_completed_q    <= '0;
+      sldu_completed_all_q1 <= '0;
+      sldu_completed_all_q2 <= '0;
+    end else begin
+      sldu_completed_q    <= sldu_completed_d;
+      sldu_completed_all_q1 <= sldu_completed_all;
+      sldu_completed_all_q2 <= sldu_completed_all_q1;
+    end
   end
 
   `ifdef ADD_RING_LATENCY
@@ -383,9 +395,8 @@ module ara_cluster import ara_pkg::*; import rvv_pkg::*;  #(
     ) i_shuffle_stage (
       .clk_i              (clk_i                ),
       .rst_ni             (rst_ni               ),
-      .cluster_metadata_i   (cluster_metadata_shuffle_cut[ShuffleCuts]  ),
-      .idx_completed_o      (idx_completed_shuffle                      ),
-      .idx_completed_sync_i (idx_completed_sync_all                     ),
+      .cluster_metadata_i (cluster_metadata_shuffle_cut[ShuffleCuts]  ),
+      .idx_completed_o    (idx_completed_sync_all                     ),
       .axi_req_i          (ara_axi_req_cut      ),
       .axi_resp_o         (ara_axi_resp_cut     ),
       .axi_req_o          (ldst_axi_req_cut     ),

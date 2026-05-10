@@ -7,6 +7,8 @@
 // Description:
 // This module does the alignment of data coming from System in stages (each stage shifting by power of 2 bytes)
 // Since alignment is done here, the alignment of responses in the cluster VLSU can be avoided
+// Note:
+// Misaligned AXI reads are supported, while misaligned AXI writes are not supported
 
 module align_stage import ara_pkg::*; import rvv_pkg::*;  #(
   parameter  int           unsigned NrClusters          = 0,
@@ -56,9 +58,9 @@ typedef struct packed {
 
 // Tracking read requests
 req_track_t [NumTrackers-1:0] tracker_d, tracker_q, tracker_q_del, tracker_d_del;
-pnt_t w_pnt_d, w_pnt_q;
-pnt_t [NumStages-1:0] r_pnt_d, r_pnt_q, r_pnt_d_del, r_pnt_q_del;
-cnt_t cnt_d, cnt_q;
+pnt_t rd_req_pnt_d, rd_req_pnt_q;
+pnt_t [NumStages-1:0] rd_resp_pnt_d, rd_resp_pnt_q, rd_resp_pnt_d_del, rd_resp_pnt_q_del;
+cnt_t rd_cnt_d, rd_cnt_q;
 
 logic [NumStages:0] axi_req_cut_ready;
 axi_resp_t [NumStages:0] axi_resp_i_cut;
@@ -87,10 +89,10 @@ always_ff @(posedge clk_i or negedge rst_ni) begin
   if(~rst_ni) begin
     tracker_q         <= '0;
     tracker_q_del     <= '0;
-    w_pnt_q           <= '0;
-    r_pnt_q           <= '0;
-    r_pnt_q_del       <= '0;
-    cnt_q             <= '0;
+    rd_req_pnt_q      <= '0;
+    rd_resp_pnt_q     <= '0;
+    rd_resp_pnt_q_del <= '0;
+    rd_cnt_q          <= '0;
     data_q            <= '0;
     data_valid_q      <= 1'b0;
     be_final_q        <= '0;
@@ -101,10 +103,10 @@ always_ff @(posedge clk_i or negedge rst_ni) begin
   end else begin
     tracker_q         <= tracker_d;
     tracker_q_del     <= tracker_d_del;     
-    w_pnt_q           <= w_pnt_d;
-    r_pnt_q           <= r_pnt_d;
-    r_pnt_q_del       <= r_pnt_d_del;
-    cnt_q             <= cnt_d;
+    rd_req_pnt_q      <= rd_req_pnt_d;
+    rd_resp_pnt_q     <= rd_resp_pnt_d;
+    rd_resp_pnt_q_del <= rd_resp_pnt_d_del;
+    rd_cnt_q          <= rd_cnt_d;
     data_q            <= data_d;
     data_valid_q      <= data_valid_d;
     be_final_q        <= be_final_d;
@@ -126,10 +128,10 @@ for (genvar s=0; s < NumStages; s++) begin
     .clr_i      ( 1'b0                      ),
     .testmode_i ( 1'b0                      ),
     .valid_i    ( axi_resp_i_cut[s].r_valid ),
-    .ready_o    ( axi_req_cut_ready[s]    ),
+    .ready_o    ( axi_req_cut_ready[s]      ),
     .data_i     ( axi_resp_i_cut[s].r       ),
     .valid_o    ( axi_resp_o_cut[s].r_valid ),
-    .ready_i    ( axi_req_cut_ready[s+1]      ),
+    .ready_i    ( axi_req_cut_ready[s+1]    ),
     .data_o     ( axi_resp_o_cut[s].r       )
   );
   
@@ -138,22 +140,20 @@ for (genvar s=0; s < NumStages; s++) begin
       .axi_data_t  ( axi_resp_t   ),
       .ShiftVal    ( 1<<(s)       )
     ) i_shift (
-      .data_i    ( axi_resp_o_cut[s]                 ),
-      .data_o    ( axi_resp_i_cut[s+1]               ),
-      .sld_valid ( tracker_q[r_pnt_q[s]].shift_en[s] )
+      .data_i    ( axi_resp_o_cut[s]                       ),
+      .data_o    ( axi_resp_i_cut[s+1]                     ),
+      .sld_valid ( tracker_q[rd_resp_pnt_q[s]].shift_en[s] )
     );
 end
 
 // Tracker status
 logic tracker_full, tracker_empty;
-assign tracker_full = (cnt_q==NumTrackers);
-assign tracker_empty = (cnt_q==0);
+assign tracker_full = (rd_cnt_q==NumTrackers);
+assign tracker_empty = (rd_cnt_q==0);
 
 // Req Channel assignments
 assign axi_req_o.aw = axi_req_i.aw;
 assign axi_req_o.aw_valid = axi_req_i.aw_valid && axi_resp_o.aw_ready;
-// assign axi_req_o.w = axi_req_i.w;
-assign axi_req_o.w_valid = axi_req_i.w_valid;
 assign axi_req_o.ar = axi_req_i.ar;
 assign axi_req_o.ar_valid = axi_req_i.ar_valid && axi_resp_o.ar_ready;
 assign axi_req_o.b_ready = axi_req_i.b_ready;
@@ -162,11 +162,7 @@ assign axi_req_o.r_ready  = axi_req_cut_ready[0];
 assign axi_req_cut_ready[NumStages] = axi_req_i.r_ready;
 
 // Resp channel assignments
-// assign axi_resp_o.aw_ready = axi_resp_i.aw_ready && !wr_tracker_full;
 assign axi_resp_o.ar_ready = axi_resp_i.ar_ready && !tracker_full; 
-assign axi_resp_o.w_ready = axi_resp_i.w_ready;
-// assign axi_resp_o.b_valid = axi_resp_i.b_valid;
-// assign axi_resp_o.b = axi_resp_i.b;
 
 assign axi_resp_i_cut[0].r = axi_resp_i.r;
 assign axi_resp_i_cut[0].r_valid = axi_resp_i.r_valid;
@@ -178,17 +174,17 @@ assign axi_resp_i_cut[0].r_valid = axi_resp_i.r_valid;
 always_comb begin
 
   // Initialize state
-  w_pnt_d      = w_pnt_q;
-  cnt_d        = cnt_q;
-  tracker_d    = tracker_q;
-  tracker_d_del = tracker_q;
-  r_pnt_d      = r_pnt_q;
-  r_pnt_d_del  = r_pnt_q;
-  data_d       = data_q;
-  data_valid_d = data_valid_q;
-  vl_d         = vl_q;
-  be_d         = be_q;
-  last_d       = last_q;
+  rd_req_pnt_d       = rd_req_pnt_q;
+  rd_cnt_d           = rd_cnt_q;
+  tracker_d          = tracker_q;
+  tracker_d_del      = tracker_q;
+  rd_resp_pnt_d      = rd_resp_pnt_q;
+  rd_resp_pnt_d_del  = rd_resp_pnt_q;
+  data_d             = data_q;
+  data_valid_d       = data_valid_q;
+  vl_d               = vl_q;
+  be_d               = be_q;
+  last_d             = last_q;
 
   //////////////////////
   // Request Handling //
@@ -203,13 +199,14 @@ always_comb begin
     automatic vlen_cluster_t vlen_request = ((burst << $clog2(AxiDataWidth/8)) - (axi_req_i.ar.addr[$clog2(AxiDataWidth/8)-1:0])) >> vew;
     vl_d = vl_q + vlen_request;
 
-    tracker_d[w_pnt_q].addr  = axi_req_i.ar.addr;
+    tracker_d[rd_req_pnt_q].addr  = axi_req_i.ar.addr;
     // Track vl expected to receive including misalignment
-    tracker_d[w_pnt_q].len   = cluster_metadata_i.vl;
-    tracker_d[w_pnt_q].vew   = vew;
-    tracker_d[w_pnt_q].op    = cluster_metadata_i.op;
+    // Set len only the for the first ar req received in case the req was split by global_ldst unit
+    tracker_d[rd_req_pnt_q].len   = (tracker_q[rd_req_pnt_q].num_requests[0] == 0) ? cluster_metadata_i.vl : tracker_q[rd_req_pnt_q].len;
+    tracker_d[rd_req_pnt_q].vew   = vew;
+    tracker_d[rd_req_pnt_q].op    = cluster_metadata_i.op;
     for (int s=0; s < NumStages; s++)
-      tracker_d[w_pnt_q].num_requests[s] += 1;
+      tracker_d[rd_req_pnt_q].num_requests[s] += 1;
     
     // Logic to handle axi requests split by the global_ldst into a single tracker
     // If the first request
@@ -217,22 +214,22 @@ always_comb begin
     if (vl_q == 0) begin
       for (int s=0; s<NumStages; s++) begin 
         if (axi_req_i.ar.addr & (1<<s)) begin 
-          tracker_d[w_pnt_q].shift_en[s] = 1'b1;
+          tracker_d[rd_req_pnt_q].shift_en[s] = 1'b1;
         end
       end
     end
 
     // If last request
-    if (vl_d >= cluster_metadata_i.vl || cluster_metadata_i.op == VLXE) begin
+    if (vl_d >= cluster_metadata_i.vl || (cluster_metadata_i.op inside {VLXE, VLSE})) begin
       // Reset vl
       vl_d = 0;
       
       // Update pointers
-      w_pnt_d = w_pnt_q + 1;
-      if (w_pnt_q == NumTrackers-1) begin 
-        w_pnt_d = 0;
+      rd_req_pnt_d = rd_req_pnt_q + 1;
+      if (rd_req_pnt_q == NumTrackers-1) begin 
+        rd_req_pnt_d = 0;
       end
-      cnt_d = cnt_d + 1;
+      rd_cnt_d = rd_cnt_d + 1;
     end
   end
 
@@ -245,7 +242,7 @@ always_comb begin
   // If a stage receives a valid packet, shift the byte enable
   for (int s=0; s < NumStages; s++) begin
     if (axi_resp_o_cut[s].r_valid) begin
-      be_d[s+1] = tracker_q[r_pnt_q[s]].shift_en[s] ? be_q[s] >> (1 << s) : be_q[s];
+      be_d[s+1] = tracker_q[rd_resp_pnt_q[s]].shift_en[s] ? be_q[s] >> (1 << s) : be_q[s];
     end
   end
   be_final_d = be_q[NumStages];
@@ -267,11 +264,11 @@ always_comb begin
     last_d = axi_resp_i_cut[NumStages].r.last;
   end
 
-  if (tracker_q[r_pnt_q[NumStages-1]].op != VLXE) begin
+  if (!(tracker_q[rd_resp_pnt_q[NumStages-1]].op inside {VLXE, VLSE})) begin
     // Combine the previous data and the current data packets using byte enable
     if (data_valid_q && axi_req_cut_ready[NumStages]) begin
       // Number of elements in a single AXI transaction
-      automatic vlen_t axi_valid_el = (AxiDataWidth/8) >> tracker_q[r_pnt_q_del[NumStages-1]].vew;
+      automatic vlen_t axi_valid_el = (AxiDataWidth/8) >> tracker_q[rd_resp_pnt_q_del[NumStages-1]].vew;
 
       // If misaligned, make sure you have a valid beat in the current cycle
       // or if the transaction is short that is check if previous beat was the last beat
@@ -286,7 +283,7 @@ always_comb begin
         axi_resp_o.r_valid  = 1'b1;
 
         // Update vector length counter
-        tracker_d[r_pnt_q_del[NumStages-1]].len -= axi_valid_el;
+        tracker_d[rd_resp_pnt_q_del[NumStages-1]].len -= axi_valid_el;
 
         // If aligned request, set data valid only if available valid beat
         data_valid_d = be_final_d[AxiDataWidth/8-1] ? axi_resp_i_cut[NumStages].r_valid : 1'b1;
@@ -294,7 +291,7 @@ always_comb begin
 
       // Use vl from tracker to check if this is the last data packet or not
       // Since using delayed data, using delayed pointer to the tracker
-      if (tracker_q[r_pnt_q_del[NumStages-1]].len <= axi_valid_el) begin
+      if (tracker_q[rd_resp_pnt_q_del[NumStages-1]].len <= axi_valid_el) begin
         // Last packet
         axi_resp_o.r.last = 1'b1;
 
@@ -319,18 +316,18 @@ always_comb begin
   // Once last packet is received by each stage, point to the next tracker.
   for (int s=0; s < NumStages; s++) begin
     if (axi_resp_o_cut[s].r.last && axi_resp_o_cut[s].r_valid && axi_req_cut_ready[s+1]) begin
-      tracker_d[r_pnt_q[s]].num_requests[s] -= 1;
+      tracker_d[rd_resp_pnt_q[s]].num_requests[s] -= 1;
 
-      if (tracker_d[r_pnt_q[s]].num_requests[s] == 0) begin
-        r_pnt_d[s] = r_pnt_q[s] + 1;
-        if (r_pnt_q[s] == NumTrackers-1) begin
-          r_pnt_d[s] = 0;
+      if (tracker_d[rd_resp_pnt_q[s]].num_requests[s] == 0) begin
+        rd_resp_pnt_d[s] = rd_resp_pnt_q[s] + 1;
+        if (rd_resp_pnt_q[s] == NumTrackers-1) begin
+          rd_resp_pnt_d[s] = 0;
         end
         
         // In the last stage, reset the shift enable for all stages
         if (s==(NumStages-1)) begin
-          tracker_d[r_pnt_q[s]].shift_en = '0;
-          cnt_d = cnt_d - 1;
+          tracker_d[rd_resp_pnt_q[s]].shift_en = '0;
+          rd_cnt_d = rd_cnt_d - 1;
         end
       end
     end
@@ -338,9 +335,14 @@ always_comb begin
 
 end
 
+//////////////////////////
+// Handle Vector Stores //
+//////////////////////////
+
 typedef struct packed {
   int len;
   ara_op_e op;
+  axi_addr_t addr;
 } wr_req_track_t;
 
 // Tracking write requests
@@ -360,8 +362,9 @@ b_track_t [NumTrackers-1:0] b_track_d, b_track_q;
 pnt_t b_pnt_d, b_pnt_q;
 pnt_t b_commit_pnt_d, b_commit_pnt_q;
 
-logic wr_tracker_full;
+logic wr_tracker_full, wr_tracker_empty;
 assign wr_tracker_full = (wr_cnt_q == NumTrackers);
+assign wr_tracker_empty = (wr_cnt_q == 0);
 assign axi_resp_o.aw_ready = axi_resp_i.aw_ready && !wr_tracker_full;
 
 always_ff @(posedge clk_i or negedge rst_ni) begin
@@ -401,6 +404,10 @@ always_comb begin
   b_pnt_d    = b_pnt_q;
   b_commit_pnt_d = b_commit_pnt_q;
 
+  //////////////////////
+  // Request Handling //
+  //////////////////////
+  
   if (axi_req_i.aw_valid && axi_resp_o.aw_ready) begin
     automatic vew_e     vew          = cluster_metadata_i.vew;
     automatic int       burst        = axi_req_i.aw.len + 1;
@@ -408,17 +415,22 @@ always_comb begin
     automatic vlen_cluster_t vlen_request = ((burst << $clog2(AxiDataWidth/8)) - (axi_req_i.aw.addr[$clog2(AxiDataWidth/8)-1:0])) >> vew;
     wr_vl_d = wr_vl_q + vlen_request;
     
+    wr_track_d[wr_pnt_q].addr          = axi_req_i.aw.addr;
     wr_track_d[wr_pnt_q].len           = axi_req_i.aw.len;
     wr_track_d[wr_pnt_q].op            = cluster_metadata_i.op;
     b_track_d[b_pnt_q].count          += 1;
 
     wr_cnt_d += 1;
     wr_pnt_d = (wr_pnt_q == NumTrackers-1) ? 0 : wr_pnt_q + 1;
-    if (wr_vl_d >= cluster_metadata_i.vl || cluster_metadata_i.op == VSXE) begin
+    if (wr_vl_d >= cluster_metadata_i.vl || cluster_metadata_i.op inside {VSXE, VSSE}) begin
       wr_vl_d = 0;
       b_pnt_d = (b_pnt_q == NumTrackers-1) ? 0 : b_pnt_q + 1;
     end
   end
+
+  ///////////////////////
+  // Response Handling //
+  ///////////////////////
 
   axi_req_o.w = axi_req_i.w;
   axi_req_o.w.last = 1'b0;
@@ -434,6 +446,33 @@ always_comb begin
       axi_req_o.w.last = 1'b1;
     end
     
+    // Set the strobe and data according to the address
+    if (wr_track_q[wr_commit_pnt_q].op inside {VSXE, VSSE}) begin
+      automatic axi_addr_t addr = wr_track_q[wr_commit_pnt_q].addr;
+      automatic logic [$clog2(AxiDataWidth/8)-1:0] start_byte_pos = addr[$clog2(AxiDataWidth/8)-1:0];
+      axi_req_o.w.strb = '0;
+      axi_req_o.w.data = '0;
+      // Set the strb at the correct byte position depending on the address and the element width
+      unique case (cluster_metadata_i.vew)
+        EW8:  begin 
+          axi_req_o.w.strb[start_byte_pos +: 1]    = axi_req_i.w.strb[0 +: 1];
+          axi_req_o.w.data[start_byte_pos*8 +: 8]  = axi_req_i.w.data[0 +: 8];
+        end
+        EW16: begin
+          axi_req_o.w.strb[start_byte_pos +: 2]    = axi_req_i.w.strb[0 +: 2];
+          axi_req_o.w.data[start_byte_pos*8 +: 16] = axi_req_i.w.data[0 +: 16];
+        end
+        EW32: begin
+          axi_req_o.w.strb[start_byte_pos +: 4]    = axi_req_i.w.strb[0 +: 4];
+          axi_req_o.w.data[start_byte_pos*8 +: 32] = axi_req_i.w.data[0 +: 32];
+        end
+        EW64: begin
+          axi_req_o.w.strb[start_byte_pos +: 8]    = axi_req_i.w.strb[0 +: 8];
+          axi_req_o.w.data[start_byte_pos*8 +: 64] = axi_req_i.w.data[0 +: 64];
+        end
+        default: axi_req_o.w.strb = '0;
+      endcase
+    end
   end
 
   // Ignore all b responses except last one
@@ -449,6 +488,21 @@ always_comb begin
     end
   end
 end
+
+// If no request present, do not receive write packet yet
+// Maybe this is not strictly necessary, but done to avoid counter going to negative values
+assign axi_resp_o.w_ready = axi_resp_i.w_ready && !wr_tracker_empty;
+assign axi_req_o.w_valid = axi_req_i.w_valid && !wr_tracker_empty;
+
+// Assertion: Verify AXI response data does not change when there is no valid handshake
+`ifndef VERILATOR
+`ifndef TARGET_SYNTHESIS
+assert property (@(posedge clk_i) disable iff (~rst_ni)
+  (axi_resp_i_cut[NumStages].r_valid && axi_req_cut_ready[NumStages]) || 
+  (data_q == $past(data_d)))
+  else $error("AXI response data changed without valid request-response handshake");
+`endif
+`endif
 
 endmodule
 

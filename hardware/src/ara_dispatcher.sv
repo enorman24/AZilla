@@ -328,6 +328,7 @@ module ara_dispatcher import ara_pkg::*; import rvv_pkg::*; #(
 
       // Inject a reshuffle instruction
       RESHUFFLE: begin
+        // TODO: Proper reshuffling yet to be implemented
         // Instruction is of one of the RVV types
         automatic rvv_instruction_t insn = rvv_instruction_t'(acc_req_i.insn.instr);
 
@@ -359,6 +360,7 @@ module ara_dispatcher import ara_pkg::*; import rvv_pkg::*; #(
         ara_req_d.vtype.vsew    = eew_new_buffer_q;
         // Always reshuffle one vreg at a time
         ara_req_d.vl            = VLENB >> ara_req_d.vtype.vsew;
+        ara_req_d.vl_cluster    = ara_req_d.vl << num_clusters_i;
         // Vl refers to current system vsew but operand requesters
         // will fetch from a register with a different eew
         ara_req_d.scale_vl      = 1'b1;
@@ -1129,6 +1131,7 @@ module ara_dispatcher import ara_pkg::*; import rvv_pkg::*; #(
                     // Copy the encoding information to the new register
                     ara_req_d.vtype.vsew    = eew_q[insn.varith_type.rs2];
                     ara_req_d.vl            = vlmax; // whole register move
+                    ara_req_d.vl_cluster    = vlmax << num_clusters_i;
                   end
                   6'b101000: ara_req_d.op = ara_pkg::VSRL;
                   6'b101001: ara_req_d.op = ara_pkg::VSRA;
@@ -2712,7 +2715,6 @@ module ara_dispatcher import ara_pkg::*; import rvv_pkg::*; #(
               ara_req_valid_d  = 1'b1;
 
               // Maximum vector length. VLMAX = nf * VLEN / EW8.
-              ara_req_d.vtype.vsew = EW8;
               unique case (insn.vmem_type.nf)
                 3'd0: begin
                   ara_req_d.vl = VLENB << 0;
@@ -2735,6 +2737,8 @@ module ara_dispatcher import ara_pkg::*; import rvv_pkg::*; #(
                   illegal_insn     = 1'b1;
                 end
               endcase
+              ara_req_d.vl = ara_req_d.vl >> ara_req_d.vtype.vsew;
+              ara_req_d.vl_cluster = ara_req_d.vl << num_clusters_i;
             end
 
             // Wait until the back-end answers to acknowledge those instructions
@@ -2917,7 +2921,6 @@ module ara_dispatcher import ara_pkg::*; import rvv_pkg::*; #(
               ignore_zero_vl_check = 1'b1;
 
               // Maximum vector length. VLMAX = nf * VLEN / EW8.
-              ara_req_d.vtype.vsew = EW8;
               unique case (insn.vmem_type.nf)
                 3'd0: begin
                   ara_req_d.vl = VLENB << 0;
@@ -2940,7 +2943,9 @@ module ara_dispatcher import ara_pkg::*; import rvv_pkg::*; #(
                   illegal_insn     = 1'b1;
                 end
               endcase
-
+              ara_req_d.vtype.vsew = eew_q[ara_req_d.vs1]; // TODO: add test on vs1r for different element widths 
+              ara_req_d.vl = ara_req_d.vl >> ara_req_d.vtype.vsew;
+              ara_req_d.vl_cluster = ara_req_d.vl << num_clusters_i;
               illegal_insn     = 1'b0;
               acc_resp_o.req_ready  = 1'b0;
               acc_resp_o.resp_valid = 1'b0;
@@ -3007,7 +3012,7 @@ module ara_dispatcher import ara_pkg::*; import rvv_pkg::*; #(
                   end
                   riscv::CSR_VLENB: begin
                     // Only reads are allowed
-                    if (acc_req_i.insn.itype.rs1 == '0) acc_resp_o.result = VLENB;
+                    if (acc_req_i.insn.itype.rs1 == '0) acc_resp_o.result = VLENB << num_clusters_i;
                     else acc_resp_o.error                                 = 1'b1;
                   end
                   riscv::CSR_VXRM: begin
@@ -3040,7 +3045,7 @@ module ara_dispatcher import ara_pkg::*; import rvv_pkg::*; #(
                   end
                   riscv::CSR_VLENB: begin
                     // Only reads are allowed
-                    if (acc_req_i.insn.itype.rs1 == '0) acc_resp_o.result = VLENB;
+                    if (acc_req_i.insn.itype.rs1 == '0) acc_resp_o.result = VLENB << num_clusters_i;
                     else acc_resp_o.error                                 = 1'b1;
                   end
                   riscv::CSR_VXSAT: begin
@@ -3089,7 +3094,7 @@ module ara_dispatcher import ara_pkg::*; import rvv_pkg::*; #(
                   end
                   riscv::CSR_VLENB: begin
                     // Only reads are allowed
-                    if (acc_req_i.insn.itype.rs1 == '0) acc_resp_o.result = VLENB;
+                    if (acc_req_i.insn.itype.rs1 == '0) acc_resp_o.result = VLENB << num_clusters_i;
                     else acc_resp_o.error                                 = 1'b1;
                   end
                   riscv::CSR_VXSAT: begin
@@ -3119,7 +3124,7 @@ module ara_dispatcher import ara_pkg::*; import rvv_pkg::*; #(
                   end
                   riscv::CSR_VLENB: begin
                     // Only reads are allowed
-                    if (acc_req_i.insn.itype.rs1 == '0) acc_resp_o.result = VLENB;
+                    if (acc_req_i.insn.itype.rs1 == '0) acc_resp_o.result = VLENB << num_clusters_i;
                     else acc_resp_o.error                                 = 1'b1;
                   end
                   riscv::CSR_VXSAT: begin

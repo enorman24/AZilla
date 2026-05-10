@@ -100,27 +100,49 @@ index b702a11..eeef776 100644
 +  // Returns 1 (true) for success, 0 (false) for errors.
 +  export "DPI-C" function simutil_set_mem;
 +  function int simutil_set_mem(input int index, input bit [511:0] val);
-+    // Function will only work for memories <= 512 bits
-+    if (DataWidth > 512)
++    automatic int unsigned chunks_per_word = (DataWidth + 511) / 512;
++    automatic int unsigned word_index = index / chunks_per_word;
++    automatic int unsigned chunk_index = index % chunks_per_word;
++    automatic int unsigned bit_offset = chunk_index * 512;
++    automatic int unsigned chunk_width =
++        (DataWidth - bit_offset > 512) ? 512 : DataWidth - bit_offset;
++
++    if (index < 0)
 +      return 0;
-+    if (index >= NumWords)
++    if (word_index >= NumWords)
 +      return 0;
 +
-+    sram[index] = val[DataWidth-1:0];
++    for (int unsigned i = 0; i < 512; i++) begin
++      if (i < chunk_width) begin
++        sram[word_index][bit_offset+i] = val[i];
++      end
++    end
++
 +    return 1;
 +  endfunction
 +
 +  // Function for getting a specific element in |sram|
 +  export "DPI-C" function simutil_get_mem;
 +  function int simutil_get_mem(input int index, output bit [511:0] val);
-+    // Function will only work for memories <= 512 bits
-+    if (DataWidth > 512)
++    automatic int unsigned chunks_per_word = (DataWidth + 511) / 512;
++    automatic int unsigned word_index = index / chunks_per_word;
++    automatic int unsigned chunk_index = index % chunks_per_word;
++    automatic int unsigned bit_offset = chunk_index * 512;
++    automatic int unsigned chunk_width =
++        (DataWidth - bit_offset > 512) ? 512 : DataWidth - bit_offset;
++
++    if (index < 0)
 +      return 0;
-+    if (index >= NumWords)
++    if (word_index >= NumWords)
 +      return 0;
 +
-+    val                = 0;
-+    val[DataWidth-1:0] = sram[index];
++    val = 0;
++    for (int unsigned i = 0; i < 512; i++) begin
++      if (i < chunk_width) begin
++        val[i] = sram[word_index][bit_offset+i];
++      end
++    end
++
 +    return 1;
 +  endfunction
 +  `endif
