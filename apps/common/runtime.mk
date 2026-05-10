@@ -131,11 +131,17 @@ RUNTIME_SPIKE ?= $(spike_env_dir)/benchmarks/common/crt.S.o.spike $(spike_env_di
 %.c.o: %.c
 	$(RISCV_CC) $(RISCV_CCFLAGS) -c $< -o $@
 
+$(spike_env_dir)/benchmarks/common/%.S.o.spike: $(spike_env_dir)/benchmarks/common/%.S patch-spike-crt0
+	$(RISCV_CC_GCC) $(RISCV_CCFLAGS_GCC) $(SPIKE_CCFLAGS) -c $< -o $@
+
+$(spike_env_dir)/benchmarks/common/%.c.o.spike: $(spike_env_dir)/benchmarks/common/%.c
+	$(RISCV_CC_GCC) $(RISCV_CCFLAGS_GCC) -std=gnu11 $(SPIKE_CCFLAGS) -c $< -o $@
+
 %.S.o.spike: %.S patch-spike-crt0
-	$(RISCV_CC) $(RISCV_CCFLAGS_SPIKE) -c $< -o $@
+	$(RISCV_CC_GCC) $(RISCV_CCFLAGS_GCC) $(SPIKE_CCFLAGS) -c $< -o $@
 
 %.c.o.spike: %.c
-	$(RISCV_CC) $(RISCV_CCFLAGS_SPIKE) -c $< -o $@
+	$(RISCV_CC_GCC) $(RISCV_CCFLAGS_GCC) -std=gnu11 $(SPIKE_CCFLAGS) -c $< -o $@
 
 %.cpp.o: %.cpp
 	$(RISCV_CXX) $(RISCV_CXXFLAGS) -c $< -o $@

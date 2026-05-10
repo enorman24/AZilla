@@ -66,24 +66,90 @@ fmatmul example for 32 lane configuration
 make bin/fmatmul nr_clusters=4 nr_lanes=4
 ```
 
+### SPIKE Simulation
 
+All applications can be simulated with SPIKE:
+
+```bash
+cd apps
+make bin/hello_world.spike
+make spike-run-hello_world
+```
+
+### RISC-V Tests
+
+To run the standardized [riscv-tests](https://github.com/riscv-software-src/riscv-tests) for AraXL:
+
+```bash
+make riscv_unit_tests
+```
+
+This downloads the riscv-tests repository, builds all unit tests and benchmarks, and applies a patch to update the `tohost` memory location to AraXL's memory-mapped EOC register. The test binary can then be run from the `hardware/` folder:
+
+```bash
+make sim preload=<path-to-test-binary>
+```
+
+## RTL Simulation
+
+### Hardware Dependencies
+
+The hardware depends on external IPs managed by Bender. To install Bender and check out all IPs:
+
+```bash
+cd hardware
+make checkout
+```
+
+### Patches
+
+Some IPs need to be patched to work with Verilator. Run once after checking out deps (or after re-checking them out):
+
+```bash
+cd hardware
+make apply-patches
+```
 
 ### Simulation
 
-For Synopsys VCS, the repository also provides a dedicated compile and headless simulation flow:
+For Synopsys VCS:
 
 ```bash
-# Go to the hardware folder
 cd hardware
-# Only compile the hardware without running the simulation.
 make compile nr_clusters=4 nr_lanes=4
-# Run the simulation with the *hello_world* binary loaded
 app=hello_world make sim_vcs
-# show waveform after simulation
 make show_vcs
 ```
 
+For Verilator:
 
+```bash
+cd hardware
+make apply-patches
+make verilate
+app=hello_world make simv
+```
+
+Add `trace=1` to `verilate`, `simv`, or `riscv_tests_simv` to generate FST waveform traces (viewable with GTKWave).
+
+To run all RISC-V unit tests with Verilator:
+
+```bash
+cd hardware
+make verilate
+make riscv_tests_simv
+```
+
+### VCD Dumping
+
+For activity-based power analysis, use `vcd_dump=1` when compiling and simulating:
+
+```bash
+make -C apps bin/${program} vcd_dump=1
+make -C hardware simc app=${program} vcd_dump=1
+```
+
+Supported kernels: `fmatmul`, `fconv3d`, `fft`, `dwt`, `exp`, `cos`, `log`, `dropout`, `jacobi2d`.
 
 ### Ideal Dispatcher mode
 

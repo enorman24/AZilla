@@ -68,7 +68,13 @@ $(APPS): % : bin/% $(APPS_DIR)/Makefile $(shell find common -type f)
 .PHONY: patch-spike-crt0
 patch-spike-crt0: $(spike_env_dir)/benchmarks/common/crt.S
 	sed -i s/"li t0, MSTATUS_FS | MSTATUS_XS$$"/"li t0, MSTATUS_FS | MSTATUS_XS | MSTATUS_VS"/ $<
-	git update-index --assume-unchanged $<
+	@if git ls-files --error-unmatch "$<" >/dev/null 2>&1; then \
+		git update-index --assume-unchanged "$<"; \
+	elif [ -d "$(spike_env_dir)/.git" ] && git -C "$(spike_env_dir)" ls-files --error-unmatch benchmarks/common/crt.S >/dev/null 2>&1; then \
+		git -C "$(spike_env_dir)" update-index --assume-unchanged benchmarks/common/crt.S; \
+	else \
+		echo "Skipping git update-index for $< (not tracked in active repository)"; \
+	fi
 
 # Only some applications need to generate and then compile the data file
 # Generate a dummy data file for applications that do not need it
@@ -100,7 +106,7 @@ $(foreach app,$(APPS),$(eval $(call app_compile_template_ideal,$(app))))
 define app_compile_template_spike
 bin/$1.spike: $1/data.S.o.spike $(addsuffix .o.spike, $(shell find $(1) -name "*.c" -o -name "*.S")) $(RUNTIME_SPIKE) $(COMMON_SPIKE) patch-spike-crt0
 	mkdir -p bin/
-	$$(RISCV_CC) -Iinclude $$(RISCV_CCFLAGS_SPIKE) -o $$@ $$(addsuffix .o.spike, $$(shell find $(1) -name "*.c" -o -name "*.S")) $(RUNTIME_SPIKE) $$(RISCV_LDFLAGS_SPIKE) -DSPIKE
+	$$(RISCV_CC_GCC) -Iinclude $$(RISCV_CCFLAGS_GCC) -o $$@ $$(addsuffix .o.spike, $$(shell find $(1) -name "*.c" -o -name "*.S")) $(RUNTIME_SPIKE) $$(RISCV_LDFLAGS_SPIKE) -DSPIKE
 	$$(RISCV_OBJDUMP) $$(RISCV_OBJDUMP_FLAGS) -D $$@ > $$@.dump
 endef
 $(foreach app,$(APPS),$(eval $(call app_compile_template_spike,$(app))))

@@ -24,9 +24,14 @@ int main(int argc, char **argv) {
                  VerilatorSimCtrlFlags::ResetPolarityNegative);
 
   // Initialize the DRAM
-  MemAreaLoc l2_mem = {.base=0x80000000, .size=0x00100000};
+  constexpr size_t kDramDataWidth = 32 * NR_LANES * NR_CLUSTERS;
+  constexpr size_t kL2NumWords = 1 << 20;
+  constexpr size_t kL2SizeBytes = kL2NumWords * (kDramDataWidth / 8);
+  MemAreaLoc l2_mem = {.base=0x80000000, .size=kL2SizeBytes};
+  constexpr size_t kMemLoadWidth =
+      kDramDataWidth > 512 ? 512 : kDramDataWidth;
   memutil.RegisterMemoryArea(
-                             "ram", "TOP.ara_tb_verilator.dut.i_ara_soc.i_dram", 32*NR_LANES*NR_CLUSTERS, &l2_mem);
+                             "ram", "TOP.ara_tb_verilator.dut.i_ara_soc.i_dram", kMemLoadWidth, &l2_mem);
   simctrl.RegisterExtension(&memutil);
 
   simctrl.SetInitialResetDelay(5);

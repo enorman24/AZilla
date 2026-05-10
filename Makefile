@@ -143,15 +143,17 @@ ${ISA_SIM_MOD_INSTALL_DIR}: Makefile patches/0003-riscv-isa-sim-patch ${ISA_SIM_
 	# If there are problems with dynamic linking, use:
 	# make riscv-isa-sim LDFLAGS="-static-libstdc++"
 	# Spike was compiled successfully using gcc and g++ version 7.2.0.
-	cd toolchain/riscv-isa-sim && git stash && git apply ../../patches/0003-riscv-isa-sim-patch && \
+	cd toolchain/riscv-isa-sim && \
+	( git apply --check ../../patches/0003-riscv-isa-sim-patch && \
+	  git apply ../../patches/0003-riscv-isa-sim-patch || \
+	  git apply --reverse --check ../../patches/0003-riscv-isa-sim-patch ) && \
 	rm -rf build && mkdir -p build && cd build; \
 	[ -d dtc ] || git clone https://git.kernel.org/pub/scm/utils/dtc/dtc.git && cd dtc && git checkout $(DTC_COMMIT); \
 	make install SETUP_PREFIX=$(ISA_SIM_MOD_INSTALL_DIR) PREFIX=$(ISA_SIM_MOD_INSTALL_DIR) && \
 	PATH=$(ISA_SIM_MOD_INSTALL_DIR)/bin:$$PATH; cd ..; \
 	../configure --prefix=$(ISA_SIM_MOD_INSTALL_DIR) \
 	--without-boost --without-boost-asio --without-boost-regex && \
-	make -j32 && make install; \
-	git stash
+	make -j32 && make install
 
 ${ISA_SIM_INSTALL_DIR}: Makefile
 	# There are linking issues with the standard libraries when using newer CC/CXX versions to compile Spike.
@@ -177,7 +179,8 @@ ${VERIL_INSTALL_DIR}: Makefile
 	# Compile verilator
 	cd $(CURDIR)/toolchain/verilator && git clean -xfdf && autoconf && \
 	CC=$(CLANG_CC) CXX=$(CLANG_CXX) CXXFLAGS=$(CLANG_CXXFLAGS) LDFLAGS=$(CLANG_LDFLAGS) \
-		./configure --prefix=$(VERIL_INSTALL_DIR) && make -j && make install
+		./configure --prefix=$(VERIL_INSTALL_DIR) && make -j8 && make install && \
+		ln -sf ../../../bin/verilator_bin $(VERIL_INSTALL_DIR)/share/verilator/bin/verilator_bin
 
 # RISC-V Tests
 .PHONY: riscv_unit_tests

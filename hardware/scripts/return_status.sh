@@ -6,7 +6,7 @@
 #
 # Author: Samuel Riedel <sriedel@iis.ee.ethz.ch>
 
-RET=$(grep 'Core Test' "$1" | grep -Poh -- '(?<=\(tohost = )-?[0-9]+(?=\))' | tail -n 1)
+RET=$(grep 'Info: Core Test' "$1" | grep -Poh -- '(?<=\(tohost = )-?[0-9]+(?=\))' | tail -n 1)
 [[ -z "${RET}" ]] && echo "Simulation did not finish" && exit 1
 echo "Simulation returned ${RET}"
 [[ "${RET}" -eq 0 ]] && exit 0 || exit 1
