@@ -1,0 +1,25 @@
+{
+  "custom_kernels": [
+    {
+      "relax_op": "relax.nn.conv2d",
+      "c_function_name": "fconv2d_3x3",
+      "source_file": "apps/fconv2d/fconv2d_3x3.c",
+      "extra_sources": [],
+      "include_dirs": ["apps/fconv2d", "apps/common"],
+      "host_compatible": false,
+
+      "args_signature": ["float64*", "float64*", "float64*"],
+      "out_dtype": "float64",
+      "target_shape": [1, 1, 16, 16],
+
+      "arg_layout": [
+        {"buffer": "out"},
+        {"buffer": "in0"},
+        {"buffer": "in1"},
+        {"scalar": "int64", "value": 16},
+        {"scalar": "int64", "value": 16},
+        {"scalar": "int64", "value": 3}
+      ]
+    }
+  ]
+}

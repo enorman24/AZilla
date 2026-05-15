@@ -68,6 +68,9 @@ archive_conf/
 
 # TVM generated artifacts
 tvm-apps/artifacts/
+tvm-apps/models/build/
+tvm-apps/models/**/build/
+build/
 
 # Local backup bundle
 araxl-backup.bundle
