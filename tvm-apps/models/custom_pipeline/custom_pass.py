@@ -1,35 +1,39 @@
-"""Custom Relax pass that swaps native Relax ops for external C kernels.
+"""Custom Relax pass that rewrites matched ops to external C kernels.
 
-Pipeline of a matched op:
+Pipeline timing:
 
-    Relax R.Call(<op>, [x, w, ...])
-        ->  R.call_tir(extern_<c_fn>, [x, w, ...], out_sinfo=...)
-              |
-              v
-        TIR PrimFunc extern_<c_fn>(handle, handle, ..., handle):
-            with T.match_buffer for each arg,
-            T.call_extern("int32", "<c_fn>", buf_in0.data, buf_in1.data, ...,
-                          buf_out.data)
+    Relax model (post ``export_tvm``)
+        |
+        v
+    [InjectCustomKernels]   <-- this pass
+        |
+        v
+    relax.get_pipeline("zero")   <-- TVM standard lowering continues
 
-Buffer-pointer flow:
+For each Relax ``Call``:
 
-  - In Relax, each arg is a Tensor; its data lives in a DLTensor.
-  - ``R.call_tir`` packs those tensors into TIR handles and invokes the
-    PrimFunc.
-  - Inside the PrimFunc, ``T.match_buffer`` (here built via ``decl_buffer``
-    + ``buffer_map``) gives us a Buffer whose ``.data`` is a raw pointer
-    (TIR ``Var`` of type ``handle``).
-  - ``T.call_extern`` forwards those raw pointers, in C-ABI order, to the
-    handwritten C function. The C function therefore sees plain
-    ``float*`` arguments and can operate on the underlying memory.
+  1. Build a :class:`CallSiteInfo` from the call's ``struct_info``.
+  2. Run the rule engine (``select_rule``) against the JSON catalog.
+  3. If a rule matches, synthesize a TIR ``PrimFunc`` whose body is
+     ``T.call_extern("int32", c_function_name, *args)`` where ``args``
+     are assembled from the kernel's ``arg_layout``:
+        - buffer entries  -> ``Buffer.data`` (raw C pointer)
+        - scalar entries  -> compile-time literal
+        - shape_var       -> resolved per callsite from the input shapes
+  4. Register that PrimFunc as a fresh GlobalVar in the IRModule.
+  5. Replace the original ``Call`` with ``R.call_tir(gv, args, out_sinfo)``
+     where ``out_sinfo`` follows the rule's output policy
+     (literal shape OR named inference, e.g. ``infer_matmul_2d``).
+
+The pass is fully data-driven from ``kernels.json``; nothing model
+specific is hardcoded here.
 """
 
 from __future__ import annotations
 
-from typing import Dict, List, Tuple
-
 import sys
 from pathlib import Path
+from typing import Dict, List, Sequence, Tuple
 
 import tvm
 from tvm import ir, relax
@@ -40,16 +44,36 @@ from tvm.relax.expr_functor import PyExprMutator, mutator
 if __package__ in (None, ""):
     sys.path.insert(0, str(Path(__file__).resolve().parent))
     from kernels_config import (  # type: ignore
-        BufferRef, KernelSpec, ScalarLiteral, specs_by_op,
+        BufferRef,
+        CallSiteInfo,
+        KernelCatalog,
+        KernelDef,
+        KernelRule,
+        ScalarLiteral,
+        ShapeVarRef,
+        resolve_output_shape,
+        select_rule,
     )
 else:
     from .kernels_config import (
-        BufferRef, KernelSpec, ScalarLiteral, specs_by_op,
+        BufferRef,
+        CallSiteInfo,
+        KernelCatalog,
+        KernelDef,
+        KernelRule,
+        ScalarLiteral,
+        ShapeVarRef,
+        resolve_output_shape,
+        select_rule,
     )
 
 
+# ----------------------------------------------------------------------
+# Shape extraction
+# ----------------------------------------------------------------------
+
 def _shape_to_int_list(shape) -> List[int]:
-    """Best-effort conversion of a Relax/TIR shape to a Python list[int]."""
+    """Best-effort conversion of a Relax/TIR shape to a Python ``list[int]``."""
     out: List[int] = []
     for dim in shape:
         if isinstance(dim, tir.IntImm):
@@ -63,37 +87,116 @@ def _shape_to_int_list(shape) -> List[int]:
     return out
 
 
+def _extract_callsite_info(call: relax.Call) -> CallSiteInfo | None:
+    op = call.op
+    if not isinstance(op, ir.Op):
+        return None
+
+    dtypes: List[str] = []
+    ranks: List[int] = []
+    shapes: List[List[int]] = []
+    for arg in call.args:
+        sinfo = arg.struct_info
+        if not isinstance(sinfo, relax.TensorStructInfo):
+            return None
+        try:
+            shape = _shape_to_int_list(sinfo.shape)
+        except ValueError:
+            return None
+        dtypes.append(sinfo.dtype)
+        ranks.append(len(shape))
+        shapes.append(shape)
+
+    return CallSiteInfo(
+        op_name=op.name,
+        input_dtypes=dtypes,
+        input_ranks=ranks,
+        input_shapes=shapes,
+    )
+
+
+# ----------------------------------------------------------------------
+# Wrapper PrimFunc synthesis (per callsite)
+# ----------------------------------------------------------------------
+
+def _resolve_shape_var(
+    kernel: KernelDef,
+    var_name: str,
+    input_shapes: Sequence[Sequence[int]],
+    output_shape: Sequence[int],
+) -> int:
+    """Look up a ``shape_var`` in the kernel's ``shape_bindings``."""
+    if var_name not in kernel.shape_bindings:
+        raise ValueError(
+            f"kernel '{kernel.name}': arg_layout uses shape_var '{var_name}' "
+            f"but no shape_bindings entry exists for it."
+        )
+    buf_name, axis = kernel.shape_bindings[var_name]
+    if buf_name == "out":
+        shape = output_shape
+    elif buf_name.startswith("in"):
+        idx = int(buf_name[2:])
+        if idx >= len(input_shapes):
+            raise ValueError(
+                f"kernel '{kernel.name}': shape_bindings['{var_name}'] refers "
+                f"to '{buf_name}' but only {len(input_shapes)} inputs provided."
+            )
+        shape = input_shapes[idx]
+    else:
+        raise ValueError(
+            f"kernel '{kernel.name}': shape_bindings['{var_name}'] has unknown "
+            f"buffer '{buf_name}' (expected 'in0', 'in1', ..., 'out')."
+        )
+    if axis < 0 or axis >= len(shape):
+        raise ValueError(
+            f"kernel '{kernel.name}': shape_bindings['{var_name}'] axis "
+            f"{axis} out of range for shape {list(shape)}."
+        )
+    return int(shape[axis])
+
+
+def _scalar_imm(dtype: str, value: float) -> tir.PrimExpr:
+    if dtype.startswith("int") or dtype.startswith("uint"):
+        return tir.IntImm(dtype, int(value))
+    if dtype.startswith("float"):
+        return tir.FloatImm(dtype, float(value))
+    raise ValueError(f"Unsupported scalar dtype '{dtype}'")
+
+
+def _shape_int64(dims: Sequence[int]) -> List[tir.PrimExpr]:
+    """Build a buffer shape with **int64** dims.
+
+    Required for structural equality with buffers TVM auto-generates
+    elsewhere (Relax struct_info, lowered ``transpose`` PrimFuncs, etc.,
+    all use ``T.int64`` extents). Mixing int32 and int64 dims triggers
+    ``Inconsistent buffers ... mapped to the same relax var`` during
+    lowering of ``R.call_tir``.
+    """
+    return [tir.IntImm("int64", int(d)) for d in dims]
+
+
 def make_extern_primfunc(
-    spec: KernelSpec,
+    kernel: KernelDef,
     input_shapes: List[List[int]],
     output_shape: List[int],
     func_symbol: str,
 ) -> tir.PrimFunc:
-    """Build a TIR PrimFunc that forwards args to ``spec.c_function_name``.
-
-    PrimFunc signature: one ``handle`` per buffer in TVM call order
-    (inputs first, then output). ``buffer_map`` ties each handle to a
-    typed ``tir.Buffer`` so ``buf.data`` is a raw C-ABI pointer.
-
-    The ``T.call_extern`` arg list, in contrast, is built from
-    ``spec.effective_arg_layout()`` so the C function sees its args in
-    its own native order (e.g. fconv2d_3x3 wants ``(o, i, f, R, C, F)``)
-    and can include scalar literals after the buffer pointers.
-    """
-    dtypes = spec.buffer_dtypes
-    num_inputs = spec.num_inputs
+    """Build a TIR PrimFunc that forwards args to the kernel's C function."""
+    dtypes = kernel.buffer_dtypes
+    num_inputs = kernel.num_inputs
 
     if len(input_shapes) != num_inputs:
         raise ValueError(
-            f"{spec.c_function_name}: expected {num_inputs} input shapes, "
+            f"{kernel.c_function_name}: expected {num_inputs} input shapes, "
             f"got {len(input_shapes)}"
         )
 
     all_shapes = list(input_shapes) + [list(output_shape)]
-    assert len(all_shapes) == len(dtypes), (
-        f"{spec.c_function_name}: shapes/dtypes length mismatch "
-        f"({len(all_shapes)} vs {len(dtypes)})"
-    )
+    if len(all_shapes) != len(dtypes):
+        raise ValueError(
+            f"{kernel.c_function_name}: shapes/dtypes length mismatch "
+            f"({len(all_shapes)} vs {len(dtypes)})"
+        )
 
     handles: List[tir.Var] = []
     buffer_map: Dict[tir.Var, tir.Buffer] = {}
@@ -102,34 +205,44 @@ def make_extern_primfunc(
     for i, (shape, dtype) in enumerate(zip(all_shapes, dtypes)):
         name = "out" if i == num_inputs else f"in{i}"
         h = tir.Var(f"{name}_handle", "handle")
-        buf = tir.decl_buffer(shape, dtype=dtype, name=name)
+        buf = tir.decl_buffer(_shape_int64(shape), dtype=dtype, name=name)
         handles.append(h)
         buffer_map[h] = buf
         buffers_by_name[name] = buf
 
-    call_args = []
-    for item in spec.effective_arg_layout():
+    call_args: List[tir.PrimExpr] = []
+    for item in kernel.effective_arg_layout():
         if isinstance(item, BufferRef):
             if item.name not in buffers_by_name:
                 raise ValueError(
-                    f"{spec.c_function_name}: arg_layout references unknown "
+                    f"{kernel.c_function_name}: arg_layout references unknown "
                     f"buffer '{item.name}'. Known: {sorted(buffers_by_name)}"
                 )
             call_args.append(buffers_by_name[item.name].data)
         elif isinstance(item, ScalarLiteral):
-            if item.dtype.startswith("int"):
-                call_args.append(tir.IntImm(item.dtype, int(item.value)))
-            elif item.dtype.startswith("float"):
-                call_args.append(tir.FloatImm(item.dtype, float(item.value)))
-            else:
-                raise ValueError(
-                    f"{spec.c_function_name}: unsupported scalar dtype '{item.dtype}'"
-                )
+            call_args.append(_scalar_imm(item.dtype, item.value))
+        elif isinstance(item, ShapeVarRef):
+            dim = _resolve_shape_var(kernel, item.name, input_shapes, output_shape)
+            call_args.append(_scalar_imm(item.dtype, dim))
         else:
             raise TypeError(f"Unknown arg_layout item: {item!r}")
 
-    body = tir.Evaluate(
-        tir.call_extern("int32", spec.c_function_name, *call_args)
+    # ``FuseTIR`` in the Relax zero pipeline expects called PrimFuncs to be
+    # schedulable (root SBlockRealize body). Wrap the extern call accordingly.
+    extern_eval = tir.Evaluate(
+        tir.call_extern("int32", kernel.c_function_name, *call_args)
+    )
+    root_block = tir.SBlock(
+        iter_vars=[],
+        reads=[],
+        writes=[],
+        name_hint="root",
+        body=extern_eval,
+    )
+    body = tir.SBlockRealize(
+        iter_values=[],
+        predicate=True,
+        block=root_block,
     )
 
     pf = tir.PrimFunc(params=handles, body=body, buffer_map=buffer_map)
@@ -138,91 +251,141 @@ def make_extern_primfunc(
     return pf
 
 
-@mutator
-class ReplaceWithExternCallMutator(PyExprMutator):
-    """Walks Relax functions and rewrites matching ops to ``call_tir``.
+# ----------------------------------------------------------------------
+# Mutator: rewrite Relax calls -> R.call_tir(extern_wrapper, ...)
+# ----------------------------------------------------------------------
 
-    For each matched ``Call``:
-      1) compute input shapes from arg ``struct_info``,
-      2) build (and cache) the TIR PrimFunc wrapping ``call_extern``,
-      3) register it in the module under a fresh GlobalVar,
-      4) emit ``R.call_tir(gv, args, out_sinfo)``.
+@mutator
+class InjectCustomKernelsMutator(PyExprMutator):
+    """Rewrites matched Relax calls to ``R.call_tir`` of synthesized wrappers.
+
+    A separate wrapper PrimFunc is generated per unique
+    ``(kernel_name, input_shapes, output_shape)`` tuple, so different
+    callsites of the same op (e.g. fc1 vs fc2 ``relax.matmul``) get
+    distinct, shape-specialized wrappers around the same C symbol.
+
+    The pass also accumulates the set of kernels actually used, so
+    downstream build code can link only the necessary C sources.
     """
 
-    def __init__(self, mod: ir.IRModule, specs: Dict[str, KernelSpec]):
+    def __init__(self, mod: ir.IRModule, catalog: KernelCatalog):
         super().__init__(mod)
         self._mod = mod
-        self._specs = specs
+        self._catalog = catalog
         self._cache: Dict[Tuple, ir.GlobalVar] = {}
+        self._used_kernels: Dict[str, KernelDef] = {}
+
+    @property
+    def used_kernels(self) -> List[KernelDef]:
+        return list(self._used_kernels.values())
+
+    def _wrapper_symbol(self, kernel: KernelDef, idx: int) -> str:
+        return f"extern_{kernel.c_function_name}_{idx}"
 
     def visit_call_(self, call: relax.Call) -> relax.Expr:  # noqa: D401
         call = super().visit_call_(call)
 
-        op = call.op
-        if not isinstance(op, ir.Op) or op.name not in self._specs:
+        site = _extract_callsite_info(call)
+        if site is None:
             return call
 
-        spec = self._specs[op.name]
+        rule = select_rule(self._catalog, site)
+        if rule is None:
+            return call
 
-        input_shapes: List[List[int]] = []
-        for arg in call.args:
-            sinfo = arg.struct_info
-            if not isinstance(sinfo, relax.TensorStructInfo):
-                return call
-            input_shapes.append(_shape_to_int_list(sinfo.shape))
+        kernel = self._catalog.kernels_for_rule(rule)
 
-        if len(input_shapes) != spec.num_inputs:
+        if len(site.input_shapes) != kernel.num_inputs:
+            return call
+
+        try:
+            output_shape = resolve_output_shape(rule.output, site)
+        except ValueError:
             return call
 
         cache_key = (
-            spec.c_function_name,
-            tuple(tuple(s) for s in input_shapes),
-            tuple(spec.target_shape),
+            kernel.name,
+            tuple(tuple(s) for s in site.input_shapes),
+            tuple(output_shape),
+            rule.output.dtype,
         )
 
         if cache_key not in self._cache:
-            func_symbol = f"extern_{spec.c_function_name}"
+            idx = len(self._cache)
+            func_symbol = self._wrapper_symbol(kernel, idx)
             pf = make_extern_primfunc(
-                spec, input_shapes, spec.target_shape, func_symbol
+                kernel,
+                [list(s) for s in site.input_shapes],
+                list(output_shape),
+                func_symbol,
             )
             gv = ir.GlobalVar(func_symbol)
             _update_struct_info(gv, relax.FuncStructInfo.opaque_func())
             self._mod[gv] = pf
             self._cache[cache_key] = gv
+            self._used_kernels[kernel.name] = kernel
 
         gv = self._cache[cache_key]
-        out_sinfo = relax.TensorStructInfo(
-            tuple(spec.target_shape), spec.output_dtype
-        )
+        out_sinfo = relax.TensorStructInfo(tuple(output_shape), rule.output.dtype)
         return relax.call_tir(gv, list(call.args), out_sinfo=out_sinfo)
 
 
-def replace_with_extern_kernels(specs: List[KernelSpec]):
-    """Factory returning a module pass parameterized by the kernel registry.
+# ----------------------------------------------------------------------
+# Public pass factory
+# ----------------------------------------------------------------------
 
-    Use as::
+def inject_custom_kernels(catalog: KernelCatalog):
+    """Module pass parameterized by the kernel catalog.
 
-        mod = replace_with_extern_kernels(specs)(mod)
+    Use::
 
-    The pass mutates a copy of ``mod``: it inserts one TIR PrimFunc per
-    unique (c_function, input_shapes) tuple and rewrites Relax callsites
-    to point at it.
+        mod = inject_custom_kernels(catalog)(mod)
+        mod = relax.get_pipeline("zero")(mod)
+
+    Returns a TVM module pass. After running, the list of kernels
+    actually selected for the model is available via
+    ``catalog.used_kernels`` if a tracking accessor was attached
+    (see ``inject_custom_kernels_tracked`` for that variant).
     """
-    indexed = specs_by_op(specs)
 
-    @ir.transform.module_pass(opt_level=0, name="ReplaceWithExternKernels")
+    @ir.transform.module_pass(opt_level=0, name="InjectCustomKernels")
     def _pass(mod: ir.IRModule, _ctx) -> ir.IRModule:
         new_mod = ir.IRModule(
             {gv: func for gv, func in mod.functions.items()},
             attrs=mod.attrs,
         )
-
-        mutator_inst = ReplaceWithExternCallMutator(new_mod, indexed)
-
+        mutator_inst = InjectCustomKernelsMutator(new_mod, catalog)
         for gv, func in list(new_mod.functions.items()):
             if isinstance(func, relax.Function):
                 new_mod[gv] = mutator_inst.visit_expr(func)
-
         return new_mod
 
     return _pass
+
+
+def inject_custom_kernels_tracked(
+    catalog: KernelCatalog,
+) -> Tuple[tvm.transform.Pass, "List[KernelDef]"]:
+    """Like :func:`inject_custom_kernels` but also returns a list that gets
+    populated with the kernels actually used by the rewritten module.
+
+    This lets the build script link only the C sources that are
+    actually invoked (instead of every kernel in the catalog).
+    """
+    used: List[KernelDef] = []
+
+    @ir.transform.module_pass(opt_level=0, name="InjectCustomKernels")
+    def _pass(mod: ir.IRModule, _ctx) -> ir.IRModule:
+        new_mod = ir.IRModule(
+            {gv: func for gv, func in mod.functions.items()},
+            attrs=mod.attrs,
+        )
+        mutator_inst = InjectCustomKernelsMutator(new_mod, catalog)
+        for gv, func in list(new_mod.functions.items()):
+            if isinstance(func, relax.Function):
+                new_mod[gv] = mutator_inst.visit_expr(func)
+        used.clear()
+        used.extend(mutator_inst.used_kernels)
+        return new_mod
+
+    return _pass, used

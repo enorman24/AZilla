@@ -63,8 +63,9 @@ veril_path     ?= $(abspath $(INSTALL_DIR)/verilator/bin)
 veril_cmd      ?= $(abspath $(veril_path)/verilator_bin)
 veril_bin_rel  ?= ../../bin/verilator_bin
 veril_opt_fast ?= -O0
-veril_output_split ?= 1000
-veril_output_split_cfuncs ?= 1000
+verilate_make_jobs ?= 20
+veril_output_split ?= 20
+veril_output_split_cfuncs ?= 20
 # verilator top-level
 veril_top      ?= ara_tb_verilator
 # Top level module to compile
@@ -279,6 +280,7 @@ tests := $(ARA_BINARIES)
 
 # Verilator
 .PHONY: verilate
+.NOTPARALLEL: verilate simv
 verilate: $(buildpath) bender $(veril_library)/V$(veril_top)
 
 $(veril_library)/V$(veril_top): $(config_file) Makefile ../Bender.yml $(shell find src -type f) $(shell find ../config -type f) $(shell find include -type f) $(shell find tb -type f) $(shell find deps -type f)
@@ -325,11 +327,11 @@ $(veril_library)/V$(veril_top): $(config_file) Makefile ../Bender.yml $(shell fi
   --cc                                                                          \
   $(if $(trace),--trace-fst -Wno-INSECURE,)                                     \
   --top-module $(veril_top) &&                                                  \
-	cd $(veril_library) && OBJCACHE='' VERILATOR_BIN=$(veril_bin_rel) make -j OPT_FAST='$(veril_opt_fast)' -f V$(veril_top).mk
+	cd $(veril_library) && OBJCACHE='' VERILATOR_BIN=$(veril_bin_rel) $(MAKE) -j $(verilate_make_jobs) OPT_FAST='$(veril_opt_fast)' -f V$(veril_top).mk
 
 # Simulation
 .PHONY: simv
-simv:
+simv: verilate
 	$(veril_library)/V$(veril_top) $(if $(trace),-t,) -l ram,$(app_path)/$(app),elf
 
 .PHONY: riscv_tests_simv

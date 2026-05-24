@@ -1,16 +1,40 @@
 {
-  "custom_kernels": [
-    {
-      "relax_op": "relax.nn.conv2d",
+  "version": "1.0",
+
+  "kernels": {
+    "fmatmul32": {
+      "c_function_name": "fmatmul32",
+      "source_file": "apps/fmatmul/kernel/fmatmul32.c",
+      "extra_sources": [],
+      "include_dirs": ["apps/fmatmul/kernel", "apps/common"],
+      "host_compatible": false,
+
+      "buffer_signature": ["float32*", "float32*", "float32*"],
+
+      "shape_bindings": {
+        "M": ["in0", 0],
+        "N": ["in0", 1],
+        "P": ["in1", 1]
+      },
+
+      "arg_layout": [
+        {"buffer": "out"},
+        {"buffer": "in0"},
+        {"buffer": "in1"},
+        {"shape_var": "M", "dtype": "int64"},
+        {"shape_var": "N", "dtype": "int64"},
+        {"shape_var": "P", "dtype": "int64"}
+      ]
+    },
+
+    "fconv2d_3x3": {
       "c_function_name": "fconv2d_3x3",
       "source_file": "apps/fconv2d/fconv2d_3x3.c",
       "extra_sources": [],
       "include_dirs": ["apps/fconv2d", "apps/common"],
       "host_compatible": false,
 
-      "args_signature": ["float64*", "float64*", "float64*"],
-      "out_dtype": "float64",
-      "target_shape": [1, 1, 16, 16],
+      "buffer_signature": ["float64*", "float64*", "float64*"],
 
       "arg_layout": [
         {"buffer": "out"},
@@ -21,5 +45,41 @@
         {"scalar": "int64", "value": 3}
       ]
     }
-  ]
+  },
+
+  "rules": [
+    {
+      "name": "matmul_fp32_2d",
+      "priority": 100,
+      "match": {
+        "relax_op": ["relax.matmul"],
+        "input_dtypes": ["float32", "float32"],
+        "input_ranks": [2, 2]
+      },
+      "kernel": "fmatmul32",
+      "output": {
+        "dtype": "float32",
+        "shape": "infer_matmul_2d"
+      }
+    },
+
+    {
+      "name": "conv2d_fp64_static_16x16x3",
+      "priority": 100,
+      "match": {
+        "relax_op": ["relax.nn.conv2d"],
+        "input_dtypes": ["float64", "float64"]
+      },
+      "kernel": "fconv2d_3x3",
+      "output": {
+        "dtype": "float64",
+        "shape": [1, 1, 16, 16]
+      }
+    }
+  ],
+
+  "policy": {
+    "on_ambiguity": "highest_priority",
+    "on_no_match": "keep_original"
+  }
 }
