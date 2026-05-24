@@ -1,0 +1,1 @@
+KERNEL_DEPS := $(ARA_DIR)/apps/fmatmul/kernel/fmatmul32.c

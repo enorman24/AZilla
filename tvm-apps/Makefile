@@ -5,6 +5,7 @@ ARA_DIR := $(shell git rev-parse --show-toplevel 2>/dev/null || echo $$ARA_DIR)
 ARTIFACTS_DIR := $(ROOT_DIR)/artifacts
 COMMON_DIR := $(ARA_DIR)/apps/common
 KERNEL_DIR := $(ROOT_DIR)/kernels
+MODEL_DIR := $(ROOT_DIR)/models
 OUTPUT_DIR := $(ARTIFACTS_DIR)/output
 BIN_DIR := $(ARTIFACTS_DIR)/bin
 BUILD_DIR := $(ARTIFACTS_DIR)/build
@@ -13,6 +14,7 @@ ARAXL_LIB := $(LIB_DIR)/libaraxl_kernels.a
 
 include $(ROOT_DIR)/config.mk
 -include $(KERNEL_DIR)/$(app)/deps.mk
+-include $(MODEL_DIR)/$(app)/deps.mk
 
 app ?= dotproduct
 nr_lanes ?= 4
@@ -21,7 +23,9 @@ nr_clusters ?= 2
 APP_BUILD_DIR = $(BUILD_DIR)/$(app)
 
 LL_FILE := $(OUTPUT_DIR)/$(app)/$(app).ll
-MAIN_C := $(KERNEL_DIR)/$(app)/$(app)_main.c
+MAIN_C := $(firstword \
+	$(wildcard $(KERNEL_DIR)/$(app)/$(app)_main.c) \
+	$(wildcard $(MODEL_DIR)/$(app)/$(app)_main.c))
 TVM_OBJ := $(APP_BUILD_DIR)/$(app).o
 MAIN_OBJ  := $(APP_BUILD_DIR)/main.c.o
 LINK_LD := $(BUILD_DIR)/link.ld
@@ -45,7 +49,7 @@ RISCV_CCFLAGS += -I$(COMMON_DIR)
 RISCV_CXXFLAGS += -I$(COMMON_DIR)
 
 
-.PHONY: compile clean linker_script sim verilate help tvm-ir
+.PHONY: compile compile-kernel compile-model clean linker_script sim verilate help tvm-ir check-main
 
 # compile the dependencies
 define compile_dep
@@ -58,8 +62,15 @@ $(foreach dep,$(KERNEL_DEPS),$(eval $(call compile_dep,$(dep))))
 $(ARAXL_LIB): $(KERNEL_DEP_OBJS) | $(LIB_DIR)
 	$(RISCV_AR) rcs $@ $^
 
+# compile the app binary (kernel or model)
+compile: check-main $(ELF)
+
 # compile the kernel binary
-compile: $(ELF)
+compile-kernel: compile
+
+
+# compile the model binary
+compile-model: compile
 
 
 help:
@@ -72,6 +83,11 @@ help:
 	@echo "  verilate   - Build Verilator simulation binary"
 	@echo "  tvm-ir     - Generate the TVM IRs"
 	@echo "  clean      - Remove all build artifacts"
+	@echo ""
+	@echo "Useful overrides:"
+	@echo "  app=<name>        - app under kernels/ or models/"
+	@echo "  LL_FILE=<path>    - use a pre-generated LLVM IR (.ll)"
+	@echo "  MAIN_C=<path>     - use a custom wrapper main.c"
 
 
 # verilate the hardware
@@ -115,13 +131,27 @@ $(BIN_DIR):
 	mkdir -p $@
 
 
-# set python location?
 $(LL_FILE):
+ifneq ($(wildcard $(KERNEL_DIR)/$(app)/$(app).py),)
 	python -m kernels.$(app).$(app)
+else
+	@echo "ERROR: Missing LL file: $(LL_FILE)"
+	@echo "Provide it explicitly with 'LL_FILE=<path>' or add kernel generator at $(KERNEL_DIR)/$(app)/$(app).py"
+	@exit 1
+endif
 
 
 $(TVM_OBJ): $(LL_FILE) | $(APP_BUILD_DIR)
 	$(RISCV_CC) $(RISCV_CCFLAGS) -x ir -c $< -o $@ 
+
+
+check-main:
+	@test -n "$(MAIN_C)" || \
+		(echo "ERROR: Missing wrapper C file. Expected one of:"; \
+		 echo "  $(KERNEL_DIR)/$(app)/$(app)_main.c"; \
+		 echo "  $(MODEL_DIR)/$(app)/$(app)_main.c"; \
+		 echo "or provide MAIN_C=<path>"; \
+		 exit 1)
 
 
 $(MAIN_OBJ): $(MAIN_C) | $(APP_BUILD_DIR)
