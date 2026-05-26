@@ -316,74 +316,24 @@ class KernelCatalog:
 
 
 def load_catalog(json_path: str | Path) -> KernelCatalog:
-    """Parse ``kernels.json`` (new schema) into a :class:`KernelCatalog`.
-
-    Also supports the legacy flat ``custom_kernels`` list for backwards
-    compatibility: each legacy entry is auto-promoted into a single
-    kernel + a single rule keyed by its ``relax_op``.
-    """
+    """Parse ``kernels.json`` into a :class:`KernelCatalog`."""
     path = Path(json_path)
     with path.open("r", encoding="utf-8") as f:
         data = json.load(f)
 
-    if "kernels" in data and "rules" in data:
-        kernels: Dict[str, KernelDef] = {}
-        for kname, kraw in data["kernels"].items():
-            kernels[kname] = _parse_kernel_def(kname, kraw)
-        rules = [_parse_rule(r, kernels) for r in data["rules"]]
-        policy_raw = data.get("policy", {})
-        policy = CatalogPolicy(
-            on_ambiguity=policy_raw.get("on_ambiguity", "highest_priority"),
-            on_no_match=policy_raw.get("on_no_match", "keep_original"),
-        )
-        return KernelCatalog(kernels=kernels, rules=rules, policy=policy)
+    if "kernels" not in data or "rules" not in data:
+        raise ValueError(f"{path}: JSON must contain 'kernels' and 'rules' keys.")
 
-    if "custom_kernels" in data:
-        return _legacy_load(data["custom_kernels"])
-
-    raise ValueError(
-        f"{path}: must contain either 'kernels'+'rules' (new schema) "
-        f"or 'custom_kernels' (legacy schema)."
-    )
-
-
-def _legacy_load(entries: List[Dict[str, Any]]) -> KernelCatalog:
-    """Promote the old flat ``custom_kernels`` list to the new catalog form."""
     kernels: Dict[str, KernelDef] = {}
-    rules: List[KernelRule] = []
-
-    for raw in entries:
-        c_fn = raw["c_function_name"]
-        kname = c_fn
-
-        kdef_raw: Dict[str, Any] = {
-            "c_function_name": c_fn,
-            "source_file": raw["source_file"],
-            "extra_sources": raw.get("extra_sources", []),
-            "include_dirs": raw.get("include_dirs", []),
-            "host_compatible": raw.get("host_compatible", True),
-            "buffer_signature": raw.get("args_signature", []),
-            "arg_layout": raw.get("arg_layout", []),
-        }
-        kernels[kname] = _parse_kernel_def(kname, kdef_raw)
-
-        out_dtype = raw.get("out_dtype")
-        if out_dtype is None and kdef_raw["buffer_signature"]:
-            out_dtype = c_arg_to_dtype(kdef_raw["buffer_signature"][-1])
-
-        rule_raw = {
-            "name": f"legacy_{c_fn}",
-            "priority": 100,
-            "match": {"relax_op": [raw["relax_op"]]},
-            "kernel": kname,
-            "output": {
-                "dtype": out_dtype,
-                "shape": raw.get("target_shape"),
-            },
-        }
-        rules.append(_parse_rule(rule_raw, kernels))
-
-    return KernelCatalog(kernels=kernels, rules=rules, policy=CatalogPolicy())
+    for kname, kraw in data["kernels"].items():
+        kernels[kname] = _parse_kernel_def(kname, kraw)
+    rules = [_parse_rule(r, kernels) for r in data["rules"]]
+    policy_raw = data.get("policy", {})
+    policy = CatalogPolicy(
+        on_ambiguity=policy_raw.get("on_ambiguity", "highest_priority"),
+        on_no_match=policy_raw.get("on_no_match", "keep_original"),
+    )
+    return KernelCatalog(kernels=kernels, rules=rules, policy=policy)
 
 
 # ----------------------------------------------------------------------
@@ -397,35 +347,6 @@ class CallSiteInfo:
     input_dtypes: Sequence[str]
     input_ranks: Sequence[int]
     input_shapes: Sequence[Sequence[int]]
-
-
-def match_rule(rule: KernelRule, site: CallSiteInfo) -> bool:
-    m = rule.match
-    if m.relax_ops and site.op_name not in m.relax_ops:
-        return False
-    if m.input_count is not None and len(site.input_dtypes) != m.input_count:
-        return False
-    if m.input_dtypes is not None:
-        if len(m.input_dtypes) != len(site.input_dtypes):
-            return False
-        for need, have in zip(m.input_dtypes, site.input_dtypes):
-            if need is not None and need != have:
-                return False
-    if m.input_ranks is not None:
-        if len(m.input_ranks) != len(site.input_ranks):
-            return False
-        for need, have in zip(m.input_ranks, site.input_ranks):
-            if need is not None and int(need) != int(have):
-                return False
-    return True
-
-
-def select_rule(catalog: KernelCatalog, site: CallSiteInfo) -> Optional[KernelRule]:
-    """Return the highest-priority matching rule, or None."""
-    matches = [r for r in catalog.rules_sorted() if match_rule(r, site)]
-    if not matches:
-        return None
-    return matches[0]
 
 
 # ----------------------------------------------------------------------

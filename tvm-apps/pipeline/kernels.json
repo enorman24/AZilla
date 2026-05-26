@@ -44,6 +44,29 @@
         {"scalar": "int64", "value": 16},
         {"scalar": "int64", "value": 3}
       ]
+    },
+
+    "fbiasadd32": {
+      "c_function_name": "fbiasadd32",
+      "source_file": "apps/fbiasadd/fbiasadd32.c",
+      "extra_sources": [],
+      "include_dirs": ["apps/fbiasadd"],
+      "host_compatible": false,
+
+      "buffer_signature": ["float32*", "float32*", "float32*"],
+
+      "shape_bindings": {
+        "M": ["in0", 0],
+        "N": ["in0", 1]
+      },
+
+      "arg_layout": [
+        {"buffer": "out"},
+        {"buffer": "in0"},
+        {"buffer": "in1"},
+        {"shape_var": "M", "dtype": "int64"},
+        {"shape_var": "N", "dtype": "int64"}
+      ]
     }
   },
 
@@ -60,6 +83,21 @@
       "output": {
         "dtype": "float32",
         "shape": "infer_matmul_2d"
+      }
+    },
+
+    {
+      "name": "biasadd_fp32",
+      "priority": 100,
+      "match": {
+        "relax_op": ["relax.add"],
+        "input_dtypes": ["float32", "float32"],
+        "input_ranks": [2, 1]
+      },
+      "kernel": "fbiasadd32",
+      "output": {
+        "dtype": "float32",
+        "shape": "infer_from_first_input"
       }
     },
 

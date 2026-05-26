@@ -63,9 +63,17 @@ veril_path     ?= $(abspath $(INSTALL_DIR)/verilator/bin)
 veril_cmd      ?= $(abspath $(veril_path)/verilator_bin)
 veril_bin_rel  ?= ../../bin/verilator_bin
 veril_opt_fast ?= -O0
-verilate_make_jobs ?= 20
-veril_output_split ?= 20
-veril_output_split_cfuncs ?= 20
+veril_output_split ?= 1000
+veril_output_split_cfuncs ?= 1000
+verilate_make_jobs ?= 8
+verilate_threads   ?= 8
+trace_enabled       := $(if $(filter 1 true yes on,$(strip $(trace))),1,)
+veril_hierarchical  ?= $(if $(trace_enabled),0,1)
+veril_hierarchical_flag := $(if $(filter 1 true yes on,$(strip $(veril_hierarchical))),--hierarchical,)
+veril_trace_flags   := $(if $(trace_enabled),--trace-fst -Wno-INSECURE,)
+veril_trace_run_arg := $(if $(trace_enabled),-t,)
+veril_run_args      ?=
+sim_run_dir         ?= $(CURDIR)
 # verilator top-level
 veril_top      ?= ara_tb_verilator
 # Top level module to compile
@@ -165,9 +173,6 @@ ring_latency ?= 0
 ifneq ($(ring_latency), 0)
 	bender_defs += --define ADD_RING_LATENCY=1 --define RING_LATENCY=$(ring_latency) 
 endif
-
-# By default tracing enabled
-bender_defs += --define PERFETTO_TRACE
 
 bender_defs_veril := $(bender_defs) --define COMMON_CELLS_ASSERTS_OFF
 
@@ -280,7 +285,6 @@ tests := $(ARA_BINARIES)
 
 # Verilator
 .PHONY: verilate
-.NOTPARALLEL: verilate simv
 verilate: $(buildpath) bender $(veril_library)/V$(veril_top)
 
 $(veril_library)/V$(veril_top): $(config_file) Makefile ../Bender.yml $(shell find src -type f) $(shell find ../config -type f) $(shell find include -type f) $(shell find tb -type f) $(shell find deps -type f)
@@ -305,7 +309,9 @@ $(veril_library)/V$(veril_top): $(config_file) Makefile ../Bender.yml $(shell fi
   -Wno-COMBDLY                                                                  \
   --output-split $(veril_output_split)                                          \
   --output-split-cfuncs $(veril_output_split_cfuncs)                            \
-  --hierarchical                                                                \
+  -fno-dfg                                                                      \
+  --threads $(verilate_threads)                                                 \
+  $(veril_hierarchical_flag)                                                    \
   tb/verilator/waiver.vlt                                                       \
   --Mdir $(veril_library)                                                       \
   -Itb/dpi                                                                      \
@@ -325,51 +331,22 @@ $(veril_library)/V$(veril_top): $(config_file) Makefile ../Bender.yml $(shell fi
   $(ROOT_DIR)/tb/verilator/lowrisc_dv_verilator_simutil_verilator/cpp/*.cc      \
   $(ROOT_DIR)/tb/verilator/ara_tb.cpp                                           \
   --cc                                                                          \
-  $(if $(trace),--trace-fst -Wno-INSECURE,)                                     \
+  $(veril_trace_flags)                                                          \
   --top-module $(veril_top) &&                                                  \
 	cd $(veril_library) && OBJCACHE='' VERILATOR_BIN=$(veril_bin_rel) $(MAKE) -j $(verilate_make_jobs) OPT_FAST='$(veril_opt_fast)' -f V$(veril_top).mk
+	test -x $@
 
 # Simulation
 .PHONY: simv
-simv: verilate
-	$(veril_library)/V$(veril_top) $(if $(trace),-t,) -l ram,$(app_path)/$(app),elf
+simv:
+	mkdir -p $(sim_run_dir)
+	cd $(sim_run_dir) && $(abspath $(veril_library)/V$(veril_top)) $(veril_trace_run_arg) $(veril_run_args) -l ram,$(abspath $(app_path))/$(app),elf
 
 .PHONY: riscv_tests_simv
 riscv_tests_simv: $(tests)
 
 $(tests): rv%: $(app_path)/rv%
-	$(veril_library)/V$(veril_top) $(if $(trace),-t,) -l ram,$<,elf &> $(buildpath)/$@.trace
-
-# Run all RISC-V tests on QuestaSim
-.PHONY: riscv_tests_simc
-riscv_tests_simc: compile
-	@failed_tests=""; \
-	GREEN='\033[92m'; RED='\033[91m'; RESET='\033[0m'; \
-	echo -e "========================================================================================="; \
-	echo -e "Running RISC-V Vector tests on QuestaSim $(nr_lanes) lanes and $(nr_clusters) clusters"; \
-	echo -e "========================================================================================="; \
-	for test in $(tests); do \
-		make simc app=$$test > $(buildpath)/$${test}.log 2>&1; \
-		if grep -q "FAILED" $(buildpath)/transcript; then \
-			printf "  ✗ %-60s $${RED}FAILED$${RESET}\n" "$$test"; \
-			failed_tests="$$failed_tests $$test"; \
-		else \
-			printf "  ✓ %-60s $${GREEN}PASSED$${RESET}\n" "$$test"; \
-		fi; \
-		cp $(buildpath)/transcript $(buildpath)/$${test}.transcript; \
-	done; \
-	if [ -n "$$failed_tests" ]; then \
-		echo -e ""; \
-		echo -e "==============================================="; \
-		echo -e "$${RED}FAILED TESTS:$$failed_tests$${RESET}"; \
-		echo -e "==============================================="; \
-		exit 1; \
-	else \
-		echo -e ""; \
-		echo -e "==============================================="; \
-		echo -e "$${GREEN}ALL TESTS PASSED$${RESET}"; \
-		echo -e "==============================================="; \
-	fi
+	$(veril_library)/V$(veril_top) $(veril_trace_run_arg) -l ram,$<,elf &> $(buildpath)/$@.trace
 
 # Lint
 .PHONY: lint spyglass/tmp/files
