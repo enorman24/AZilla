@@ -15,11 +15,11 @@ class DotProduct:
             with T.sblock("dotproduct"):
                 vi = T.axis.reduce(64, i)
                 with T.init():
-                    c[0] = T.float32(0) # initialize a new tensor
-                c[0] = c[0] + a[vi] * b[vi] # doing the dot product
+                    c[0] = T.float32(0)
+                c[0] = c[0] + a[vi] * b[vi]
 
 
 if __name__ == "__main__":
-    with tvm.transform.PassContext(opt_level=3): # set optimization level
-        lib = tvm.build(DotProduct, target=target) # runs compilation
-    save_kernel("dotproduct", lib)
+    with tvm.transform.PassContext(opt_level=3):
+        lib = tvm.build(DotProduct, target=target)
+    save_kernel("dotproduct", lib, source_mod=DotProduct)

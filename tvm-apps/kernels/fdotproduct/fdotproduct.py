@@ -17,5 +17,5 @@ class FDotProduct:
 
 if __name__ == "__main__":
     with tvm.transform.PassContext(opt_level=3):
-        lib = tvm.build(FDotProduct, target= target)
-    save_kernel("fdotproduct", lib)
+        lib = tvm.build(FDotProduct, target=target)
+    save_kernel("fdotproduct", lib, source_mod=FDotProduct)

@@ -1,7 +1,27 @@
+#include <stdint.h>
 #include "../common/tvm_harness.h"
+
 // Full-model entrypoint exported from quick_start.ll.
 extern int __tvm_ffi_fused_transpose_extern_fmatmul32_0_add_relu_transpose1_extern_fmatmul32_1_add1(
     void *self_handle, TVMArg *args, int num_args, void *result);
+
+// quick_start.ll declares these as null global pointers; FuseTIR calls them for
+// intermediate buffer allocation (~816 KB total across 3 allocations).
+extern void *(*__TVMBackendAllocWorkspace)(int, int, uint64_t, int, int);
+extern int   (*__TVMBackendFreeWorkspace)(int, int, void *);
+
+#define TVM_WORKSPACE_SIZE (1024 * 1024)
+static char _tvm_ws[TVM_WORKSPACE_SIZE] __attribute__((aligned(64), section(".l2")));
+static uint64_t _tvm_ws_top = 0;
+
+static void *_tvm_alloc(int dt, int did, uint64_t n, int dc, int db) {
+    (void)dt; (void)did; (void)dc; (void)db;
+    uintptr_t base = (uintptr_t)(_tvm_ws + _tvm_ws_top);
+    uintptr_t aligned = (base + 63) & ~(uintptr_t)63;
+    _tvm_ws_top = (aligned - (uintptr_t)_tvm_ws) + n;
+    return (void *)aligned;
+}
+static int _tvm_free(int dt, int did, void *p) { (void)dt; (void)did; (void)p; return 0; }
 
 static float x_data[1 * 784] __attribute__((aligned(64), section(".l2")));
 static float fc1_w_data[256 * 784] __attribute__((aligned(64), section(".l2")));
@@ -57,6 +77,9 @@ int main(void) {
   args[3].type_index = TVM_ARG_HANDLE; args[3].padding = 0; args[3].value.v_handle = &fc2_w;
   args[4].type_index = TVM_ARG_HANDLE; args[4].padding = 0; args[4].value.v_handle = &fc2_b;
   args[5].type_index = TVM_ARG_HANDLE; args[5].padding = 0; args[5].value.v_handle = &out;
+
+  __TVMBackendAllocWorkspace = _tvm_alloc;
+  __TVMBackendFreeWorkspace  = _tvm_free;
 
   // Returns 0 on success (TVM convention)
   return __tvm_ffi_fused_transpose_extern_fmatmul32_0_add_relu_transpose1_extern_fmatmul32_1_add1(

@@ -1,0 +1,29 @@
+# local.mk.example — copy to local.mk and fill in your machine's paths.
+#
+# local.mk is gitignored and loaded automatically by the Makefile.
+# Anything set here overrides the Makefile defaults.
+# You only need to set what differs from the repo defaults (ARA_DIR/install/*
+# produced by AraXL/scripts/get-started.sh).
+#
+# Quick start:
+#   1.  cp local.mk.example local.mk
+#   2.  Set TVM_HOME below to your TVM source tree
+#   3.  make show-artifacts app=dotproduct   <- verify paths look right
+#   4.  make tvm-ir app=dotproduct
+
+# ─── TVM ─────────────────────────────────────────────────────────────────────
+# Path to your TVM source tree (must be built from source; see AGENTS.md).
+TVM_HOME := /path/to/tvm
+
+# Python command with the tvm-dev conda env active.  Choose one:
+#   TVM_PYTHON := conda run -n tvm-dev python                      (default)
+#   TVM_PYTHON := /home/you/miniforge3/envs/tvm-dev/bin/python     (direct)
+TVM_PYTHON := conda run -n tvm-dev python
+
+# ─── Verilator (only needed for make verilate) ────────────────────────────────
+# Leave commented to use the bundled install at $(ARA_DIR)/install/verilator.
+# VERILATOR_ROOT := /path/to/verilator
+
+# ─── RISC-V toolchain (only if not using ARA_DIR/install/riscv-llvm) ─────────
+# Leave commented to use the toolchain from scripts/get-started.sh.
+# INSTALL_DIR := /path/to/custom/install

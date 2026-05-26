@@ -72,5 +72,8 @@ tvm-apps/models/build/
 tvm-apps/models/**/build/
 build/
 
+# Per-machine path overrides (copy from local.mk.example)
+tvm-apps/local.mk
+
 # Local backup bundle
 araxl-backup.bundle
