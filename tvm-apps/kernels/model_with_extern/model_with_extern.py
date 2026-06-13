@@ -1,7 +1,7 @@
 """Generator for model_with_extern: a single fmatmul32 extern-kernel TIR wrapper.
 
 Builds an IRModule with one PrimFunc (extern_fmatmul32_0) that forwards to the
-hand-written fmatmul32 C kernel from AraXL/apps/fmatmul/kernel/fmatmul32.c.
+hand-written fmatmul32 C kernel from AZilla/apps/fmatmul/kernel/fmatmul32.c.
 
 Shape: (1, 784) x (784, 256) -> (1, 256) matching model_with_extern_main.c.
 

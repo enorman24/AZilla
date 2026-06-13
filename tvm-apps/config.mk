@@ -1,23 +1,23 @@
 # ════════════════════════════════════════════════════════════════════════════
-#  config.mk — user settings for AraXL/tvm-apps/Makefile
+#  config.mk — user settings for AZilla/tvm-apps/Makefile
 #
 #  Machine-specific paths (TVM tree, Verilator) go in local.mk
 #
 #  Command-line overrides always win, e.g.:
-#    make sim app=tiny_mlp nr_clusters=8 sim_cycles=20000
+#    make sim app=dotproduct nr_clusters=8 sim_cycles=20000
 # ════════════════════════════════════════════════════════════════════════════
 
 # ─── App ─────────────────────────────────────────────────────────────────────
 # Kernel under kernels/ or model under models/ to build/simulate.
-app := dotproduct
+app := fdotproduct
 
 # ─── Hardware configuration ──────────────────────────────────────────────────
 # These settings are baked into the Verilator binary at compile time.
 # Changing any of them requires:  make verilate  (then  make sim).
 #
-# config selects the hardware config file from AraXL/config/<config>.mk
+# config selects the hardware config file from AZilla/config/<config>.mk
 config      := default
-nr_clusters := 4
+nr_clusters := 2
 nr_lanes    := 4
 
 # Memory / interconnect latency in cycles (0 = ideal). Requires re-verilate.
@@ -46,5 +46,4 @@ verilate_threads := 8
 TVM_PYTHON ?= conda run -n tvm-dev python
 
 # spike-dasm for instruction-trace decoding during sim.
-# Defaults to the bundled binary from AraXL/scripts/get-started.sh.
 SPIKE_DASM ?= $(ARA_DIR)/install/riscv-isa-sim/bin/spike-dasm

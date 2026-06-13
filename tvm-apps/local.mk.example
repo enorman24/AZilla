@@ -12,7 +12,7 @@
 #   4.  make tvm-ir app=dotproduct
 
 # ─── TVM ─────────────────────────────────────────────────────────────────────
-# Path to your TVM source tree (must be built from source; see AGENTS.md).
+# Path to your TVM source tree (must be built from source; see ../SOFTWARE.md).
 TVM_HOME := /path/to/tvm
 
 # Python command with the tvm-dev conda env active.  Choose one:

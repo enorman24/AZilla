@@ -55,13 +55,22 @@ GENERATOR_PY := $(firstword \
 TVM_OBJ := $(APP_OBJ_DIR)/$(app).o
 LL_COMPAT := $(APP_OBJ_DIR)/$(app)-compat.ll
 MAIN_OBJ  := $(APP_OBJ_DIR)/main.c.o
-LINK_LD := $(LIB_DIR)/link.ld
+LINK_LD := $(LIB_DIR)/link-nc$(nr_clusters)-l$(nr_lanes).ld
 ELF := $(APP_BIN_DIR)/$(app)
 _mem_lat_sfx  := $(if $(filter-out 0,$(mem_latency)),-ml$(mem_latency),)
 _cva6_lat_sfx := $(if $(filter-out 0,$(cva6_latency)),-cl$(cva6_latency),)
 _ring_lat_sfx := $(if $(filter-out 0,$(ring_latency)),-rl$(ring_latency),)
 VERIL_BUILD_DIR := build-nc$(nr_clusters)-l$(nr_lanes)$(_mem_lat_sfx)$(_cva6_lat_sfx)$(_ring_lat_sfx)$(if $(trace_enabled),-trace,)
 VERIL_BINARY := $(ARA_DIR)/hardware/$(VERIL_BUILD_DIR)/verilator/Vara_tb_verilator
+VCS_BUILD_DIR    := build-vcs-nc$(nr_clusters)-l$(nr_lanes)$(_mem_lat_sfx)$(_cva6_lat_sfx)$(_ring_lat_sfx)
+VCS_BINARY       ?= $(ARA_DIR)/hardware/$(VCS_BUILD_DIR)/vcs/simv
+VCS_DPI_LIB      ?= $(ARA_DIR)/hardware/$(VCS_BUILD_DIR)/work-dpi/ara_dpi
+# EDA tool env. VCS_HOME / LM_LICENSE_FILE are inherited from the shell
+# environment (e.g. your site EDA setup script) or set in local.mk. They are
+# only injected into the sub-make when actually set, so an unset value never
+# clobbers the inherited PATH / license. VERDI defaults to the command name.
+VERDI            ?= verdi
+VCS_ENV          := $(if $(strip $(VCS_HOME)),VCS_HOME=$(VCS_HOME) PATH=$(VCS_HOME)/bin:$$PATH ,)$(if $(strip $(LM_LICENSE_FILE)),LM_LICENSE_FILE=$(LM_LICENSE_FILE) ,)
 
 
 KERNEL_DEP_OBJS := $(patsubst %.c, $(LIB_DIR)/%.o, $(notdir $(KERNEL_DEPS)))
@@ -76,12 +85,14 @@ RUNTIME_LLVM := \
 
 include $(COMMON_DIR)/runtime.mk
 RISCV_CCFLAGS += -I$(COMMON_DIR)
+RISCV_LDFLAGS += -nostdlib
+RISCV_BUILTINS ?= $(ARA_DIR)/install/riscv-llvm/lib/linux/libclang_rt.builtins-riscv64.a
 RISCV_CXXFLAGS += -I$(COMMON_DIR)
 
 TVM_PYTHON ?= conda run -n tvm-dev python
 SPIKE_DASM ?= $(ARA_DIR)/install/riscv-isa-sim/bin/spike-dasm
 # TVM tree paths — override TVM_HOME in local.mk for your machine.
-TVM_HOME         ?= /mnt/ssd/enorman/tvm
+TVM_HOME         ?= /mnt/ssd/enorman/tools/tvm
 TVM_LIBRARY_PATH ?= $(TVM_HOME)/build/lib
 TVM_PYTHONPATH   ?= $(TVM_HOME)/python
 TVM_ENV          := PYTHONPATH=$(TVM_PYTHONPATH):$$PYTHONPATH TVM_HOME=$(TVM_HOME) TVM_LIBRARY_PATH=$(TVM_LIBRARY_PATH)
@@ -92,7 +103,7 @@ VERILATOR_ROOT   ?= $(ARA_DIR)/install/verilator
 APP_MANIFEST_CMD = $(TVM_MANIFEST_ENV) $(TVM_PYTHON) $(TVM_APPS_DIR)/pipeline/artifacts.py app-manifest --output "$(APP_MANIFEST)" --app "$(app)" --app-kind "$(APP_KIND)" --generator "$(GENERATOR_PY)" --main-c "$(MAIN_C)" $(foreach dep,$(KERNEL_DEPS),--kernel-dep "$(dep)") --target-triple "riscv64-unknown-elf" --target-mattr "+v,+m,+f,+d" --target-abi "lp64d" --config "$(config)" --nr-clusters "$(nr_clusters)" --nr-lanes "$(nr_lanes)" --mem-latency "$(mem_latency)" --cva6-latency "$(cva6_latency)" --ring-latency "$(ring_latency)" --trace "$(trace_status)" --tool "TVM_PYTHON=$(TVM_PYTHON)" --tool "RISCV_CC=$(RISCV_CC)" --tool "RISCV_OBJDUMP=$(RISCV_OBJDUMP)" --tool "RISCV_STRIP=$(RISCV_STRIP)" --tool "VERILATOR_BINARY=$(VERIL_BINARY)" --app-dir "$(APP_DIR)" --ir-dir "$(APP_IR_DIR)" --tvm-dir "$(APP_TVM_DIR)" --obj-dir "$(APP_OBJ_DIR)" --bin-dir "$(APP_BIN_DIR)" --sim-dir "$(APP_SIM_DIR)" --elf "$(ELF)" --llvm-ir "$(LL_FILE)" --compat-llvm-ir "$(LL_COMPAT)" --linker-script "$(LINK_LD)" --verilator-binary "$(VERIL_BINARY)"
 APP_AUDIT_CMD = $(TVM_MANIFEST_ENV) $(TVM_PYTHON) $(TVM_APPS_DIR)/pipeline/artifacts.py audit --app "$(app)" --app-kind "$(APP_KIND)" --generator "$(GENERATOR_PY)" --main-c "$(MAIN_C)" --app-dir "$(APP_DIR)" --ir-dir "$(APP_IR_DIR)" --tvm-dir "$(APP_TVM_DIR)" --obj-dir "$(APP_OBJ_DIR)" --bin-dir "$(APP_BIN_DIR)" --sim-dir "$(APP_SIM_DIR)" --elf "$(ELF)" --llvm-ir "$(LL_FILE)" --compat-llvm-ir "$(LL_COMPAT)" --linker-script "$(LINK_LD)" --verilator-binary "$(VERIL_BINARY)"
 
-.PHONY: compile compile-kernel compile-model clean-build clean-sim clean-all-build clean-all-sim distclean linker_script sim verilate help tvm-ir check-main show-artifacts write-app-manifest audit report check-symbols monitor monitor-latest
+.PHONY: compile compile-kernel compile-model clean-build clean-sim clean-all-build clean-all-sim distclean linker_script sim verilate compile-vcs view-sim help tvm-ir check-main show-artifacts write-app-manifest audit report check-symbols monitor monitor-latest
 .PRECIOUS: $(RUNTIME_LLVM)
 
 # compile the dependencies
@@ -140,6 +151,8 @@ help:
 	@echo "  compile    - Build the kernel ELF binary"
 	@echo "  sim        - Run simulation"
 	@echo "  verilate   - Build Verilator simulation binary"
+	@echo "  compile-vcs - Build VCS simulation binary"
+	@echo "  view-sim   - Open Verdi on the latest VCS waveform (FSDB), or do nothing if none exists"
 	@echo "  tvm-ir     - Generate the TVM IRs"
 	@echo "  monitor        - Tail live.log for a specific run (uses RUN_ID); run in a second pane"
 	@echo "  monitor-latest - Tail live.log for the most recent sim run (sim/latest)"
@@ -173,6 +186,22 @@ verilate: | $(APP_LOG_RUN_DIR)
 			verilate_threads=$(verilate_threads) \
 			trace=$(trace_enabled); \
 	} 2>&1 | tee -a $(APP_LOG_RUN_DIR)/verilate.log; exit $${PIPESTATUS[0]}
+
+
+# compile the VCS hardware binary
+compile-vcs: | $(APP_LOG_RUN_DIR)
+	@set -o pipefail; { \
+		echo "=== compile-vcs nr_clusters=$(nr_clusters) nr_lanes=$(nr_lanes) mem_latency=$(mem_latency) cva6_latency=$(cva6_latency) ring_latency=$(ring_latency) $$(date -Iseconds) ==="; \
+		echo "cmd: $(VCS_ENV) make -C $(ARA_DIR)/hardware compile_vcs buildpath=$(VCS_BUILD_DIR) nr_lanes=$(nr_lanes) nr_clusters=$(nr_clusters) mem_latency=$(mem_latency) cva6_latency=$(cva6_latency) ring_latency=$(ring_latency) config=$(config)"; \
+		$(VCS_ENV) make -C $(ARA_DIR)/hardware compile_vcs \
+			buildpath=$(VCS_BUILD_DIR) \
+			nr_lanes=$(nr_lanes) \
+			nr_clusters=$(nr_clusters) \
+			mem_latency=$(mem_latency) \
+			cva6_latency=$(cva6_latency) \
+			ring_latency=$(ring_latency) \
+			config=$(config); \
+	} 2>&1 | tee -a $(APP_LOG_RUN_DIR)/compile-vcs.log; exit $${PIPESTATUS[0]}
 
 
 # simulator on the hardware
@@ -285,8 +314,92 @@ sim: compile
 	 exit $$rc
 else ifeq ($(simulator), vcs)
 sim: compile
-	@echo "VCS simulator not yet configured"
+	@test -f $(VCS_BINARY) || \
+		(echo "ERROR: VCS binary not found at $(VCS_BINARY). Run 'make compile-vcs' first."; exit 1)
+	@mkdir -p $(APP_SIM_RUN_DIR)/inputs
+	@ln -sfn runs/$(RUN_ID) $(APP_SIM_DIR)/latest
+	@cp $(ELF)          $(APP_SIM_RUN_DIR)/inputs/ 2>/dev/null || true
+	@cp $(LL_FILE)      $(APP_SIM_RUN_DIR)/inputs/ 2>/dev/null || true
+	@cp $(LL_COMPAT)    $(APP_SIM_RUN_DIR)/inputs/ 2>/dev/null || true
+	@cp $(MAIN_C)       $(APP_SIM_RUN_DIR)/inputs/ 2>/dev/null || true
+	@cp $(APP_MANIFEST) $(APP_SIM_RUN_DIR)/inputs/manifest.json 2>/dev/null || true
+	@cp $(APP_DIR)/pipeline.json $(APP_SIM_RUN_DIR)/inputs/ 2>/dev/null || true
+	@set -o pipefail; \
+	 start=$$(date -Iseconds); \
+	 cmd="$(VCS_ENV) make -C $(ARA_DIR)/hardware simv_vcs buildpath=$(VCS_BUILD_DIR) simv_vcs_binary=$(VCS_BINARY) simv_vcs_dpi=$(VCS_DPI_LIB) app_path=$(APP_BIN_DIR) app=$(app) sim_run_dir=$(APP_SIM_RUN_DIR)"; \
+	 monitor_pid=""; \
+	 if [ -f "$(TVM_APPS_DIR)/scripts/sim-monitor.sh" ]; then \
+		bash "$(TVM_APPS_DIR)/scripts/sim-monitor.sh" "$(APP_SIM_RUN_DIR)" --interval 5 >/dev/null 2>&1 & \
+		monitor_pid=$$!; \
+	 fi; \
+	 { \
+		printf "=== sim app=$(app) nr_clusters=$(nr_clusters) nr_lanes=$(nr_lanes) mem_latency=$(mem_latency) cva6_latency=$(cva6_latency) ring_latency=$(ring_latency) simulator=vcs run_id=$(RUN_ID) %s ===\n" "$$start"; \
+		printf "cmd: %s\n" "$$cmd"; \
+		$(VCS_ENV) make -C $(ARA_DIR)/hardware simv_vcs \
+			buildpath=$(VCS_BUILD_DIR) \
+			simv_vcs_binary=$(VCS_BINARY) \
+			simv_vcs_dpi=$(VCS_DPI_LIB) \
+			app_path=$(APP_BIN_DIR) \
+			app=$(app) \
+			sim_run_dir=$(APP_SIM_RUN_DIR); \
+		exit $$?; \
+	 } 2>&1 | tee $(APP_SIM_RUN_DIR)/sim.log; \
+	 rc=$${PIPESTATUS[0]}; \
+	 if [ -n "$$monitor_pid" ]; then \
+		kill "$$monitor_pid" 2>/dev/null || true; \
+		wait "$$monitor_pid" 2>/dev/null || true; \
+	 fi; \
+	 if [ $$rc -eq 0 ]; then \
+		$(ARA_DIR)/hardware/scripts/return_status.sh $(APP_SIM_RUN_DIR)/sim.log; \
+		rc=$$?; \
+	 fi; \
+	 end=$$(date -Iseconds); \
+	 $(TVM_MANIFEST_ENV) $(TVM_PYTHON) $(TVM_APPS_DIR)/pipeline/artifacts.py sim-manifest \
+		--output "$(APP_SIM_RUN_DIR)/manifest.json" \
+		--app "$(app)" \
+		--run-id "$(RUN_ID)" \
+		--simulator "vcs" \
+		--command "$$cmd" \
+		--cwd "$(APP_SIM_RUN_DIR)" \
+		--elf "$(ELF)" \
+		--verilator-binary "$(VCS_BINARY)" \
+		--return-code "$$rc" \
+		--start-time "$$start" \
+		--end-time "$$end" \
+		--config "$(config)" \
+		--nr-clusters "$(nr_clusters)" \
+		--nr-lanes "$(nr_lanes)" \
+		--mem-latency "$(mem_latency)" \
+		--cva6-latency "$(cva6_latency)" \
+		--ring-latency "$(ring_latency)" \
+		--trace "$(trace_status)" \
+		--inputs-dir "$(APP_SIM_RUN_DIR)/inputs" \
+		--repro-env "TVM_HOME=$(TVM_HOME)" \
+		--repro-env "TVM_LIBRARY_PATH=$(TVM_LIBRARY_PATH)" \
+		--repro-env "PYTHONPATH=$(TVM_PYTHONPATH):$$PYTHONPATH" \
+		--repro-env "nr_clusters=$(nr_clusters)" \
+		--repro-env "nr_lanes=$(nr_lanes)"; \
+	 exit $$rc
 endif
+
+# Open Verdi on the FSDB waveform produced by a VCS sim run.
+# Prefers a specific run when RUN_ID=<id> is passed; otherwise uses the most
+# recent run via the 'latest' symlink. Does nothing (exit 0) if no FSDB exists.
+# Note: FSDB waveforms are only produced by VCS sims (make sim simulator=vcs),
+# not by Verilator runs.
+view-sim:
+	@run_fsdb="$(APP_SIM_RUN_DIR)/waveform.fsdb"; \
+	latest_fsdb="$(APP_SIM_DIR)/latest/waveform.fsdb"; \
+	if [ -f "$$run_fsdb" ]; then fsdb="$$run_fsdb"; \
+	elif [ -f "$$latest_fsdb" ]; then fsdb="$$latest_fsdb"; \
+	else fsdb=""; fi; \
+	if [ -z "$$fsdb" ]; then \
+		echo "view-sim: no FSDB waveform found for app=$(app)."; \
+		echo "          Run 'make sim app=$(app) simulator=vcs' to generate one. Nothing to view."; \
+		exit 0; \
+	fi; \
+	echo "view-sim: opening Verdi on $$fsdb"; \
+	$(if $(strip $(LM_LICENSE_FILE)),LM_LICENSE_FILE=$(LM_LICENSE_FILE) ,)$(VERDI) -ssf "$$fsdb"
 
 tvm-ir:
 ifneq ($(wildcard $(KERNEL_DIR)/$(app)/$(app).py),)
@@ -403,10 +516,10 @@ LIB_FLAGS :=
 endif
 
 $(ELF): $(ELF_DEPS) | $(APP_BIN_DIR) $(APP_LOG_RUN_DIR)
-	@set -o pipefail; { \
+	@set -o pipefail -e; { \
 		echo "=== link ELF $$(date -Iseconds) ==="; \
-		echo "cmd: $(RISCV_CC) $(RISCV_CCFLAGS) $(RISCV_LDFLAGS) $(TVM_OBJ) $(MAIN_OBJ) $(RUNTIME_LLVM) $(LIB_FLAGS) -o $@ -T$(LINK_LD) -Wl,-Map=$(APP_BIN_DIR)/$(app).map"; \
-		$(RISCV_CC) $(RISCV_CCFLAGS) $(RISCV_LDFLAGS) $(TVM_OBJ) $(MAIN_OBJ) $(RUNTIME_LLVM) $(LIB_FLAGS) -o $@ -T$(LINK_LD) -Wl,-Map=$(APP_BIN_DIR)/$(app).map; \
+		echo "cmd: $(RISCV_CC) $(RISCV_CCFLAGS) $(RISCV_LDFLAGS) $(TVM_OBJ) $(MAIN_OBJ) $(RUNTIME_LLVM) $(LIB_FLAGS) $(RISCV_BUILTINS) -o $@ -T$(LINK_LD) -Wl,-Map=$(APP_BIN_DIR)/$(app).map"; \
+		$(RISCV_CC) $(RISCV_CCFLAGS) $(RISCV_LDFLAGS) $(TVM_OBJ) $(MAIN_OBJ) $(RUNTIME_LLVM) $(LIB_FLAGS) $(RISCV_BUILTINS) -o $@ -T$(LINK_LD) -Wl,-Map=$(APP_BIN_DIR)/$(app).map; \
 		echo "cmd: $(RISCV_OBJDUMP) $(RISCV_OBJDUMP_FLAGS) -D $@ > $@.dump"; \
 		$(RISCV_OBJDUMP) $(RISCV_OBJDUMP_FLAGS) -D $@ > $@.dump; \
 		echo "cmd: cp $@ $(APP_BIN_DIR)/$(app).unstripped"; \
@@ -465,6 +578,7 @@ show-artifacts:
 	@echo "spike-dasm:      $(SPIKE_DASM)"
 	@echo "TVM python:      $(TVM_PYTHON)"
 	@echo "Verilator binary: $(VERIL_BINARY)"
+	@echo "VCS binary:      $(VCS_BINARY)"
 	@if [ -d "$(APP_DIR)" ]; then find "$(APP_DIR)" -maxdepth 5 \( -type f -o -type l \) -print | sort; fi
 	@if [ -f "$(APP_DIR)/pipeline.json" ]; then \
 		echo ""; \

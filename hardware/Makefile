@@ -342,6 +342,16 @@ simv:
 	mkdir -p $(sim_run_dir)
 	cd $(sim_run_dir) && $(abspath $(veril_library)/V$(veril_top)) $(veril_trace_run_arg) $(veril_run_args) -l ram,$(abspath $(app_path))/$(app),elf
 
+simv_vcs_binary ?= $(vcs_binary)
+simv_vcs_dpi    ?= $(abspath $(buildpath)/$(dpi_library)/ara_dpi)
+.PHONY: simv_vcs
+simv_vcs:
+	mkdir -p $(sim_run_dir)
+	cd $(sim_run_dir) && \
+	$(simv_vcs_binary) \
+		-sv_lib $(simv_vcs_dpi) \
+		$(vcs_run_args)
+
 .PHONY: riscv_tests_simv
 riscv_tests_simv: $(tests)
 

@@ -103,7 +103,7 @@ def _write_repro_sh(run_dir: str, env_vars: List[str], make_command: str) -> str
     """
     lines = [
         "#!/usr/bin/env bash",
-        "# Reproduces this sim run from AraXL/tvm-apps/.",
+        "# Reproduces this sim run from AZilla/tvm-apps/.",
         "# Paths are absolute to the machine where this run was recorded.",
         "set -e",
         "",

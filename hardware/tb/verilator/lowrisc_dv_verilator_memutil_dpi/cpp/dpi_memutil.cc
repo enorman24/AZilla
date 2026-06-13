@@ -173,7 +173,7 @@ static std::vector<uint8_t> FlattenElfFile(const std::string &filepath) {
     if (!any || phdr.p_paddr < low) {
       low = phdr.p_paddr;
       std::cout << "Program header number " << i << " in `" << filepath
-                << "' low is " << std::hex << low << std::endl;
+                << "' low is 0x" << std::hex << low << std::dec << std::endl;
     }
 
     Elf64_Addr seg_top = phdr.p_paddr + (phdr.p_memsz - 1);
@@ -188,7 +188,7 @@ static std::vector<uint8_t> FlattenElfFile(const std::string &filepath) {
     if (!any || seg_top > high) {
       high = seg_top;
       std::cout << "Program header number " << i << " in `" << filepath
-                << "' high is " << std::hex << high << std::endl;
+                << "' high is 0x" << std::hex << high << std::dec << std::endl;
     }
 
     any = true;
@@ -252,7 +252,7 @@ static void WriteSegment(const MemArea &m, uint32_t offset,
       "0x" << std::hex << m.addr_loc.base << " "
       "0x" << std::hex << m.addr_loc.size << " "
       << "write with offset: 0x" << std::hex << offset << " "
-      << "write with size: 0x" << std::hex << data.size() << "\n";
+      << "write with size: 0x" << std::hex << data.size() << std::dec << "\n";
   assert(m.width_byte <= 64);
   assert(m.addr_loc.size == 0 || offset + data.size() <= m.addr_loc.size);
   assert((offset % m.width_byte) == 0);
