@@ -12,6 +12,62 @@ Multiple Ara2 clusters are interconnected with interfaces designed to access the
 
 AraXL is developed as part of the [PULP (Parallel Ultra-Low Power) Platform](https://pulp-platform.org/), a joint effort between ETH Zurich and the University of Bologna.
 
+## For new users and contributors
+
+This section is an on-ramp for anyone starting from a fresh clone. It points you
+through the rest of the documentation in the right order.
+
+### 0. Prerequisites and access
+
+- **Server / network access.** Building and simulating AraXL is done on a shared
+  Linux server. If you are working off campus you may need VPN access first — see
+  the [ECE remote access guide](https://peden.ece.uw.edu/computing/ece-only/ece-remote-access/).
+- **Push access.** You can clone and build without any special permissions. To
+  push branches back, contact the repository owner to be added as a collaborator.
+- **New to the command line or Git/GitHub?** A little background goes a long way:
+  - [The Missing Semester of Your CS Education](https://missing.csail.mit.edu/) (shell, Git, tooling)
+  - [GitHub: Git Handbook](https://docs.github.com/en/get-started/using-git/about-git)
+  - [Pro Git book](https://git-scm.com/book/en/v2) (free, comprehensive)
+
+### 1. Clone the repository
+
+```bash
+git clone git@github.com:enorman24/AZilla.git
+cd AZilla
+```
+
+(If you have not set up SSH keys with GitHub, use the HTTPS URL from the repo's
+green **Code** button instead.)
+
+### 2. Create your own branch before editing
+
+Never commit directly to the default branch. Create a branch for your work:
+
+```bash
+git checkout -b <your-branch-name>
+```
+
+Push it (once you have collaborator access) with:
+
+```bash
+git push -u origin <your-branch-name>
+```
+
+### 3. Follow the rest of the setup, in order
+
+1. **Build the toolchain and hardware deps** — the [Get started](#get-started)
+   section below (`./scripts/get-started.sh`).
+2. **Set up the compiler software stack (TVM / TileLang)** — see
+   [`SOFTWARE.md`](SOFTWARE.md).
+3. **Build, simulate, and debug TVM kernels on AraXL** — see
+   [`tvm-apps/README.md`](tvm-apps/README.md), which walks through configuring,
+   verilating, simulating the `dotproduct` kernel, and waveform debugging.
+
+> **Tip:** Long-running steps (toolchain builds, verilation, RTL simulation)
+> should be run inside [`tmux`](https://github.com/tmux/tmux/wiki) so they survive
+> SSH disconnects. Start a session with `tmux`, run your command, detach with
+> `Ctrl-b d`, and reattach later with `tmux attach`.
+
 ## 📜 License
 Unless specified otherwise in the respective file headers, all code in this repository is released under permissive licenses.
 - Hardware sources and tool scripts are licensed under the [Solderpad Hardware License 0.51](LICENSE.hw) or compatible licenses.

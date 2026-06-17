@@ -1,0 +1,1 @@
+KERNEL_DEPS := $(ARA_DIR)/apps/fdotproduct/kernel/fdotproduct.c

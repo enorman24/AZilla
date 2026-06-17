@@ -9,9 +9,13 @@ This file specifies the functionalities of the RISC-V Vector Specification suppo
 
 ## Vector Loads and Stores
 
-- Vector unit-strided loads: `vle<eew>, vl1r.v`
+- Vector unit-strided loads: `vle<eew>`, `vl1r.v`
 - Vector unit-strided stores: `vse<eew>`, `vs1r.v`
-- Strided loads and indexed loads are not yet supported
+- Vector strided loads: `vlse{8,16,32,64}.v` (positive and zero stride; negative stride not tested)
+- Vector strided stores: `vsse{8,16,32,64}.v`
+- Vector indexed unordered loads: `vluxei{8,16,32,64}.v`
+- Vector indexed unordered stores: `vsuxei{8,16,32,64}.v`
+- Ordered indexed loads/stores (`vloxei`, `vsoxei`) are **not yet supported**
 
 ## Vector Integer Arithmetic Instructions
 
