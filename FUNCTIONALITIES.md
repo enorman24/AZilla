@@ -48,7 +48,7 @@ This file specifies the functionalities of the RISC-V Vector Specification suppo
 - Vector floating-point square-root instruction: `vfsqrt`
 - Vector floating-point min/max instructions: `vfmin`, `vfmax`
 - Vector floating-point sign-injection instructions: `vfsgnj`, `vfsgnjn`, `vfsgnjx`
-- Vecotr floating-point classify instruction: `vfclass`
+- Vector floating-point classify instruction: `vfclass`
 - Vector floating-point merge instruction: `vfmerge`
 - Vector floating-point move instruction: `vfmv`
 - Vector floating-point compare instructions: `vmfeq`, `vmfne`, `vmflt`, `vmfle`, `vmfgt`, `vmfge`
@@ -86,3 +86,7 @@ This file specifies the functionalities of the RISC-V Vector Specification suppo
 - Vector single-width fractional multiply with rounding and saturation instruction: `vsmul`
 - Vector single-width scaling shift instructions: `vssra`, `vssrl`
 - Vector narrowing fixed-point clip instructions: `vnclip`, `vnclipu`
+
+## Ideal Dispatcher mode
+
+In Ideal Dispatcher simulation mode, additional restrictions apply beyond this list — for example, vector instructions that use the `rs2` register may be unsupported. See the Ideal Dispatcher section in `README.md` for mode setup and limitations.

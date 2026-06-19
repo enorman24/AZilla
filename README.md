@@ -1,33 +1,14 @@
-<h1 align="center">AraXL: A Physically Scalable, Ultra-Wide RISC-V Vector Processor Design for Fast and Efficient Computation on Long Vectors</h1>
-
-<a href="https://pulp-platform.org">
-<img src="docs/source/images/pulp_logo_icon.svg" alt="Logo" width="100" align="right">
-</a>
+# AraXL: A Physically Scalable, Ultra-Wide RISC-V Vector Processor Design for Fast and Efficient Computation on Long Vectors
 
 The scaled up Ara version AraXL is a vector unit working as a coprocessor for the CVA6 core.
 It supports the RISC-V Vector Extension, [version 1.0](https://github.com/riscv/riscv-v-spec/releases/tag/v1.0).
 
-AraXL architecture consists of multiple Ara instances (Ara2 - https://github.com/pulp-platform/ara) and each Ara2 cluster is a lane based vector processor. 
+AraXL architecture consists of multiple Ara instances (Ara2 - https://github.com/pulp-platform/ara) and each Ara2 cluster is a lane based vector processor.
 Multiple Ara2 clusters are interconnected with interfaces designed to access the L2 memory, other neighboring clusters and receive vector instructions from the CVA6 scalar core.
 
 AraXL is developed as part of the [PULP (Parallel Ultra-Low Power) Platform](https://pulp-platform.org/), a joint effort between ETH Zurich and the University of Bologna.
 
-## For new users and contributors
-
-This section is an on-ramp for anyone starting from a fresh clone. It points you
-through the rest of the documentation in the right order.
-
-### 0. Prerequisites and access
-
-- **Server / network access.** Building and simulating AraXL is done on a shared
-  Linux server. If you are working off campus you may need VPN access first — see
-  the [ECE remote access guide](https://peden.ece.uw.edu/computing/ece-only/ece-remote-access/).
-- **Push access.** You can clone and build without any special permissions. To
-  push branches back, contact the repository owner to be added as a collaborator.
-- **New to the command line or Git/GitHub?** A little background goes a long way:
-  - [The Missing Semester of Your CS Education](https://missing.csail.mit.edu/) (shell, Git, tooling)
-  - [GitHub: Git Handbook](https://docs.github.com/en/get-started/using-git/about-git)
-  - [Pro Git book](https://git-scm.com/book/en/v2) (free, comprehensive)
+## For new contributors
 
 ### 1. Clone the repository
 
@@ -44,7 +25,7 @@ green **Code** button instead.)
 Never commit directly to the default branch. Create a branch for your work:
 
 ```bash
-git checkout -b <your-branch-name>
+git switch -c <your-branch-name>
 ```
 
 Push it (once you have collaborator access) with:
@@ -58,43 +39,65 @@ git push -u origin <your-branch-name>
 1. **Build the toolchain and hardware deps** — the [Get started](#get-started)
    section below (`./scripts/get-started.sh`).
 2. **Set up the compiler software stack (TVM / TileLang)** — see
-   [`SOFTWARE.md`](SOFTWARE.md).
+   [SOFTWARE.md](SOFTWARE.md).
 3. **Build, simulate, and debug TVM kernels on AraXL** — see
-   [`tvm-apps/README.md`](tvm-apps/README.md), which walks through configuring,
-   verilating, simulating the `dotproduct` kernel, and waveform debugging.
+   [tvm-apps/README.md](tvm-apps/README.md), which walks through configuring,
+   verilating, simulating the `fdotproduct` kernel (default in `tvm-apps/config.mk`), and waveform debugging.
 
 > **Tip:** Long-running steps (toolchain builds, verilation, RTL simulation)
-> should be run inside [`tmux`](https://github.com/tmux/tmux/wiki) so they survive
+> should be run inside [tmux](https://github.com/tmux/tmux/wiki) so they survive
 > SSH disconnects. Start a session with `tmux`, run your command, detach with
 > `Ctrl-b d`, and reattach later with `tmux attach`.
 
 ## 📜 License
+
 Unless specified otherwise in the respective file headers, all code in this repository is released under permissive licenses.
+
 - Hardware sources and tool scripts are licensed under the [Solderpad Hardware License 0.51](LICENSE.hw) or compatible licenses.
 - All software sources are licensed under [Apache 2.0](LICENSE.sw). Modified or reuse of external contributions and the licenses are listed in the [apps/README.md](apps/README.md).
 
 ## Dependencies
 
-Check `DEPENDENCIES.md` for a list of hardware and software dependencies of Ara.
+Check `DEPENDENCIES.md` for a list of hardware and software dependencies of AZilla/AraXL.
 
 ## Supported instructions
 
-Check `FUNCTIONALITIES.md` to check which instructions are currently support by Ara.
+Check `FUNCTIONALITIES.md` to check which instructions are supported by AraXL.
+
+## Prerequisites
+
+The bootstrap builds the GCC/LLVM toolchains from source, so the host needs:
+
+- **GCC ≥ 7.4** (the LLVM revision's minimum; the system compiler on RHEL/CentOS 7 is too old)
+- **CMake ≥ 3.20**
+- **Ninja**
+- **Python ≥ 3.8**
+
+> **Older hosts (RHEL/CentOS 7, GLIBC 2.17):** the system GCC, CMake, and Python
+> are too old. See [SETUP_OLDER_HOSTS.md](SETUP_OLDER_HOSTS.md) for a step-by-step
+> workaround.
 
 ## Get started
 
-Use the one-shot bootstrap script to prepare a fresh checkout. It will sync and update submodules, build the GCC/LLVM toolchains, build Spike and Verilator, checkout the hardware IP dependencies, and apply the required hardware patches:
+This is the first build step after cloning. The one-shot bootstrap script prepares a
+fresh checkout by running these stages in order:
+
+1. Sync and update Git submodules.
+2. Build the GCC and LLVM toolchains.
+3. Build Spike (ISA simulator) and Verilator (RTL simulator).
+4. Check out the hardware IP dependencies (via Bender).
+5. Apply the required hardware patches.
+
+Run it from the repository root:
 
 ```bash
 ./scripts/get-started.sh
 ```
 
-For incremental runs, you can skip specific stages. For example, if the toolchains are already built:
-
-```bash
-./scripts/get-started.sh --skip-gcc --skip-llvm --skip-spike --skip-verilator
-```
-
+> **Tip:** This takes a while (the toolchain builds dominate). Run it inside
+> [tmux](https://github.com/tmux/tmux/wiki) so it survives SSH disconnects. The
+> script is resumable — pass `--skip-sync`, `--skip-gcc`, `--skip-llvm`, etc. to
+> re-run only the stages you need (`--help` lists them all).
 
 ## Configuration
 
@@ -117,7 +120,9 @@ The `apps` folder contains example applications that work on Ara. Run the follow
 cd apps
 make bin/hello_world
 ```
-fmatmul example for 32 lane configuration
+
+fmatmul example for 16 lane configuration
+
 ```
 make bin/fmatmul nr_clusters=4 nr_lanes=4
 ```
@@ -172,7 +177,7 @@ For Synopsys VCS:
 
 ```bash
 cd hardware
-make compile nr_clusters=4 nr_lanes=4
+make compile_vcs nr_clusters=4 nr_lanes=4
 app=hello_world make sim_vcs
 make show_vcs
 ```
@@ -196,25 +201,17 @@ make verilate
 make riscv_tests_simv
 ```
 
-### VCD Dumping
-
-For activity-based power analysis, use `vcd_dump=1` when compiling and simulating:
-
-```bash
-make -C apps bin/${program} vcd_dump=1
-make -C hardware simc app=${program} vcd_dump=1
-```
-
-Supported kernels: `fmatmul`, `fconv3d`, `fft`, `dwt`, `exp`, `cos`, `log`, `dropout`, `jacobi2d`.
-
 ### Ideal Dispatcher mode
+
+> **Note:** Ideal Dispatcher mode may not be working correctly right now. Use with caution.
 
 CVA6 can be replaced by an ideal FIFO that dispatches the vector instructions to Ara with the maximum issue-rate possible.
 In this mode, only Ara and its memory system affect performance.
 This mode has some limitations:
- - The dispatcher is a simple FIFO. Ara and the dispatcher cannot have complex interactions.
- - Therefore, the vector program should be fire-and-forget. There cannot be runtime dependencies from the vector to the scalar code.
- - Not all the vector instructions are supported, e.g., the ones that use the `rs2` register.
+
+- The dispatcher is a simple FIFO. Ara and the dispatcher cannot have complex interactions.
+- Therefore, the vector program should be fire-and-forget. There cannot be runtime dependencies from the vector to the scalar code.
+- Not all the vector instructions are supported, e.g., the ones that use the `rs2` register.
 
 To compile a program and generate its vector trace:
 
@@ -231,13 +228,10 @@ cd hardware
 make sim app=${program} ideal_dispatcher=1 nr_clusters=4 nr_lanes=4
 ```
 
-### Linting Flow
-
-We also provide Synopsys Spyglass linting scripts in the hardware/spyglass. Run make lint in the hardware folder, with a specific MemPool configuration, to run the tests associated with the lint_rtl target.
-
 ## Publications
 
 If you want to use AraXL, you can cite us:
+
 ```
 @INPROCEEDINGS{10992880,
   author={Purayil, Navaneeth Kunhi and Perotti, Matteo and Fischer, Tim and Benini, Luca},
@@ -251,6 +245,7 @@ If you want to use AraXL, you can cite us:
   doi={10.23919/DATE64628.2025.10992880}
 }
 ```
+
 ```
 @Article{Ara2020,
   author = {Matheus Cavalcante and Fabian Schuiki and Florian Zaruba and Michael Schaffner and Luca Benini},
@@ -263,6 +258,7 @@ If you want to use AraXL, you can cite us:
   doi    = {10.1109/TVLSI.2019.2950087}
 }
 ```
+
 ```
 @INPROCEEDINGS{9912071,
   author={Perotti, Matteo and Cavalcante, Matheus and Wistoff, Nils and Andri, Renzo and Cavigelli, Lukas and Benini, Luca},
@@ -274,3 +270,4 @@ If you want to use AraXL, you can cite us:
   pages={43-51},
   doi={10.1109/ASAP54787.2022.00017}}
 ```
+

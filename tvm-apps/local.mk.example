@@ -8,8 +8,8 @@
 # Quick start:
 #   1.  cp local.mk.example local.mk
 #   2.  Set TVM_HOME below to your TVM source tree
-#   3.  make show-artifacts app=dotproduct   <- verify paths look right
-#   4.  make tvm-ir app=dotproduct
+#   3.  make show-artifacts app=fdotproduct   <- verify paths look right
+#   4.  make tvm-ir app=fdotproduct
 
 # ─── TVM ─────────────────────────────────────────────────────────────────────
 # Path to your TVM source tree (must be built from source; see ../SOFTWARE.md).
