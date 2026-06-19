@@ -143,6 +143,12 @@ If you want it:
 
 ## 4. Wire it into `tvm-apps`
 
+Relax models build through the extern-kernel pipeline in
+[`tvm-apps/pipeline/`](tvm-apps/pipeline/) (`runner.py`, `kernels.json`) via
+`make tvm-ir app=<model>`. Standalone kernels live under `kernels/<app>/` and
+use the same Makefile targets. See [`tvm-apps/README.md`](tvm-apps/README.md)
+for the full pipeline layout.
+
 Machine-specific paths live in `tvm-apps/local.mk`, which is **gitignored** and
 loaded automatically by the Makefile. Copy the template and edit it:
 
@@ -162,7 +168,7 @@ TVM_PYTHON := conda run -n tvm-dev python
 Verify the paths resolve before building:
 
 ```bash
-make show-artifacts app=dotproduct
+make show-artifacts app=fdotproduct
 ```
 
 You are now ready to build and simulate — continue in

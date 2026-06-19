@@ -11,18 +11,7 @@ novas.conf
 novas.rc
 
 # Simulation / benchmark run outputs
-runs/**
-!runs/**/
-!runs/**/benchmark-rows/**
-!runs/**/plots/**
-runs/**/*.log
-runs/**/*.rpt
-runs/**/*.vcd
-runs/**/*.fst
-runs/**/*.fsdb
-runs/**/*.vpd
-runs/**/*.jou
-runs/**/*.wdb
+runs/
 benchmark-runs/
 benchmark_errors_*.rpt
 *.rpt
