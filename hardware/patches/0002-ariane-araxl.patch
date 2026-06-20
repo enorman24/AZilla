@@ -1,0 +1,58 @@
+diff --git a/common/local/util/tc_sram_wrapper.sv b/common/local/util/tc_sram_wrapper.sv
+index ae3287d93..5fadb4899 100644
+--- a/common/local/util/tc_sram_wrapper.sv
++++ b/common/local/util/tc_sram_wrapper.sv
+@@ -34,6 +34,26 @@ module tc_sram_wrapper #(
+   output data_t [NumPorts-1:0] rdata_o     // read data
+ );
+ 
++`ifdef GF12_SRAM_MACRO
++  // GF12-hardened cut. Routed through the neutral gf12_vrf_bank wrapper, which holds
++  // the foundry macro and its pin mapping in the private gf12_flow_ssrl repo (added
++  // to the filelist only when the build opts in with gf12_sram=1). The CVA6 caches
++  // resolve to 64-word x 64-bit single-port byte-enable cuts here, the same geometry
++  // as the Ara VRF bank, so they share one wrapper. See hardware/docs/GF12_SRAM.md.
++  gf12_vrf_bank #(
++    .NumWords (NumWords ),
++    .DataWidth(DataWidth)
++  ) i_gf12_sram (
++    .clk_i  ( clk_i      ),
++    .rst_ni ( rst_ni     ),
++    .req_i  ( req_i[0]   ),
++    .we_i   ( we_i[0]    ),
++    .be_i   ( be_i[0]    ),
++    .addr_i ( addr_i[0]  ),
++    .wdata_i( wdata_i[0] ),
++    .rdata_o( rdata_o[0] )
++  );
++`else
+ // synthesis translate_off
+ 
+   tc_sram #(
+@@ -56,5 +76,6 @@ module tc_sram_wrapper #(
+     );
+ 
+ // synthesis translate_on
++`endif
+ 
+ endmodule
+diff --git a/core/cva6.sv b/core/cva6.sv
+index 6ca08aa9a..367a50045 100644
+--- a/core/cva6.sv
++++ b/core/cva6.sv
+@@ -970,6 +970,7 @@ module cva6 import ariane_pkg::*; #(
+ `endif // PITON_ARIANE
+ 
+ `ifndef VERILATOR
++`ifndef DISABLE_INSTR_TRACER
+   instr_tracer_if tracer_if (clk_i);
+   // assign instruction tracer interface
+   // control signals
+@@ -1011,6 +1012,7 @@ module cva6 import ariane_pkg::*; #(
+     .tracer_if(tracer_if),
+     .hart_id_i
+   );
++`endif // DISABLE_INSTR_TRACER
+ 
+ // mock tracer for Verilator, to be used with spike-dasm
+ `else

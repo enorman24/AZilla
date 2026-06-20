@@ -26,6 +26,9 @@ endif
 config_file := $(ROOT_DIR)/../config/$(config).mk
 include $(abspath $(ROOT_DIR)/../config/$(config).mk)
 
+# Optional local overrides (gitignored): e.g. GF12_SRAM_DIR for the private GF12 build.
+-include $(ROOT_DIR)/local.mk
+
 # Clang flags for Verilator command
 ifneq (${CLANG_PATH},)
 	CLANG_CXXFLAGS := -CFLAGS "-nostdinc++ -isystem $(CLANG_PATH)/include/c++/v1"
@@ -136,14 +139,36 @@ else
 	preload ?= "$(app_path)/$(app)"
 endif
 endif
-ifdef preload
-	questa_args += +PRELOAD=$(preload)
-	vcs_run_args += +PRELOAD=$(preload)
+# DRAM program preload (VCS/Questa): tc_sram.sv loads i_dram from a $readmemh vmem at
+# time zero via +DRAM_INIT_FILE. The vmem is generated from the ELF by elf2vmem.py.
+# (The Verilator flow loads the ELF via VerilatorMemUtil and is unaffected.)
+VMEM_PYTHON ?= python3
+ELF2VMEM    := $(abspath $(ROOT_DIR)/scripts/elf2vmem.py)
+# nr_clusters default must be declared before dram_bytes_per_word because := expands immediately.
+nr_clusters ?= 2
+# AxiDataWidth = 32 * NrLanes * NrClusters bits -> bytes_per_word = 4 * NrLanes * NrClusters
+dram_bytes_per_word := $(shell expr 4 \* $(nr_lanes) \* $(nr_clusters))
+ifdef app
+ifeq ($(ideal_dispatcher), 1)
+  dram_elf  := $(app_path)/$(app).ideal
+else
+  dram_elf  := $(app_path)/$(app)
 endif
-questa_args += -sv_lib $(dpi_library)/ara_dpi -work $(library) -voptargs=+acc
+  dram_vmem := $(dram_elf).vmem
+endif
+ifdef preload
+	questa_args  += +DRAM_INIT_FILE=$(dram_vmem)
+	vcs_run_args += +DRAM_INIT_FILE=$(dram_vmem)
+endif
+questa_args += -work $(library) -voptargs=+acc
 questa_args += -suppress vsim-3009 -suppress vopt-7033
 
-# DPI source files
+$(dram_vmem): $(dram_elf) $(ELF2VMEM)
+	$(VMEM_PYTHON) $(ELF2VMEM) $< $@ \
+	    --dram-base 0x80000000 --dram-length 0x40000000 \
+	    --bytes-per-word $(dram_bytes_per_word)
+
+# DPI source files (tb/dpi is empty unless DPI sources are added)
 dpi_src := $(wildcard tb/dpi/*.cc)
 dpi     := $(patsubst tb/dpi/%.cc,$(buildpath)/$(dpi_library)/%.o,$(dpi_src))
 
@@ -153,7 +178,6 @@ vlog_args += -work $(library)
 # Bender
 # Defines
 bender_defs += --define NR_LANES=$(nr_lanes) --define VLEN=$(vlen) --define ARIANE_ACCELERATOR_PORT=1
-nr_clusters ?= 2
 ifneq ($(nr_clusters), 0)
 	bender_defs += --define USE_CLUSTER=1 --define NR_CLUSTERS=$(nr_clusters)
 endif
@@ -175,6 +199,31 @@ ifneq ($(ring_latency), 0)
 endif
 
 bender_defs_veril := $(bender_defs) --define COMMON_CELLS_ASSERTS_OFF
+
+# VRF bank SRAM backend for VCS/Questa.
+#   Public default : behavioral tc_sram (open PULP tech_cells_generic, no IP needed).
+#   Private GF12   : pass `gf12_sram=1` with GF12_SRAM_DIR pointing at the private
+#                    integration dir (neutral gf12_vrf_bank.sv wrapper + GF12 model).
+#                    These sources are never committed to this repo. Set GF12_SRAM_DIR
+#                    in hardware/local.mk (gitignored) to avoid passing it each time.
+# See hardware/docs/GF12_SRAM.md. Verilator always uses tc_sram (bender_defs_veril).
+bender_defs_sim   := $(bender_defs)
+GF12_SRAM_DIR     ?=
+GF12_SRAM_SRCS    :=
+GF12_QUESTA_INJECT := true
+GF12_VCS_INJECT    := true
+ifeq ($(gf12_sram),1)
+  ifeq ($(strip $(GF12_SRAM_DIR)),)
+    $(error gf12_sram=1 requires GF12_SRAM_DIR=<private integration dir>; see hardware/docs/GF12_SRAM.md)
+  endif
+  bender_defs_sim    += --define GF12_SRAM_MACRO=1
+  GF12_SRAM_SRCS     := $(wildcard $(GF12_SRAM_DIR)/*.sv)
+  vlog_args          += +incdir+$(GF12_SRAM_DIR)
+  vlogan_args        += +incdir+$(GF12_SRAM_DIR)
+  # Analyze the private wrapper into the same lib, after the bender-listed sources.
+  GF12_QUESTA_INJECT := echo 'vlog $(vlog_args) $(GF12_SRAM_SRCS)'
+  GF12_VCS_INJECT    := echo 'vlogan -sverilog -full64 $(vlogan_args) $(GF12_SRAM_SRCS)'
+endif
 
 # Targets
 bender_common_targs := -t rtl -t cv64a6_imafdcv_sv39 -t tech_cells_generic_include_tc_sram -t tech_cells_generic_include_tc_clk
@@ -210,9 +259,16 @@ checkout: $(BENDER)
 	$(BENDER) checkout
 
 # Patches
+# Apply a Bender dep patch idempotently: skip if already applied, else apply (fail on conflict).
+# $(1) = dep dir (relative to hardware/), $(2) = patch filename under hardware/patches/.
+define apply_dep_patch
+cd $(1) && { git apply --reverse --check $(ROOT_DIR)/patches/$(2) >/dev/null 2>&1 && echo "  [skip] $(2) already applied in $(1)" || { git apply $(ROOT_DIR)/patches/$(2) && echo "  [ok]   applied $(2) to $(1)"; }; }
+endef
+
 .PHONY: apply-patches
 apply-patches: patches
-	cd deps/tech_cells_generic && git apply ../../patches/0001-tech-cells-generic-sram.patch
+	@$(call apply_dep_patch,deps/tech_cells_generic,0001-tech-cells-generic-sram.patch)
+	@$(call apply_dep_patch,deps/ariane,0002-ariane-araxl.patch)
 
 # Library
 .PHONY: lib
@@ -223,8 +279,9 @@ $(buildpath)/$(library):
 # Compilation
 .PHONY: compile
 compile: dpi lib $(buildpath) bender $(buildpath)/compile_$(config).tcl
-$(buildpath)/compile_$(config).tcl: $(config_file) Makefile ../Bender.yml $(shell find src -type f) $(shell find ../config -type f) $(shell find include -type f) $(shell find tb -type f) $(shell find deps -type f)
-	$(BENDER) script vsim --vlog-arg="$(vlog_args)" $(bender_targs_simc) $(bender_defs) > $(buildpath)/compile_$(config).tcl
+$(buildpath)/compile_$(config).tcl: $(config_file) Makefile ../Bender.yml $(GF12_SRAM_SRCS) $(shell find src -type f) $(shell find ../config -type f) $(shell find include -type f) $(shell find tb -type f) $(shell find deps -type f)
+	$(BENDER) script vsim --vlog-arg="$(vlog_args)" $(bender_targs_simc) $(bender_defs_sim) > $(buildpath)/compile_$(config).tcl
+	$(GF12_QUESTA_INJECT) >> $(buildpath)/compile_$(config).tcl
 	echo "exit" >> $(buildpath)/compile_$(config).tcl
 	cd $(buildpath) && $(questa_cmd) vsim -work $(library) -c -do compile_$(config).tcl
 	# Rename the file if compilation did not succeed
@@ -232,13 +289,13 @@ $(buildpath)/compile_$(config).tcl: $(config_file) Makefile ../Bender.yml $(shel
 
 # Simulation
 .PHONY: sim
-sim: compile
+sim: compile $(dram_vmem)
 	cd $(buildpath) && \
 	$(questa_cmd) vsim $(questa_args) $(library).$(top_level) -do ../scripts/run$(ideal).tcl
 	./scripts/return_status.sh $(buildpath)/transcript
 
 .PHONY: simc
-simc: compile
+simc: compile $(dram_vmem)
 	cd $(buildpath) && \
 	$(questa_cmd) vsim -c $(questa_args) $(library).$(top_level) -do "run -a"
 	./scripts/return_status.sh $(buildpath)/transcript
@@ -247,11 +304,12 @@ simc: compile
 .PHONY: compile_vcs sim_vcs simc_vcs sim_gui_vcs show_vcs
 compile_vcs: dpi $(vcs_buildpath) bender $(vcs_binary)
 
-$(vcs_script): $(vcs_buildpath) $(BENDER) $(config_file) Makefile ../Bender.yml $(shell find src -type f) $(shell find ../config -type f) $(shell find include -type f) $(shell find tb -type f) $(shell find deps -type f)
+$(vcs_script): $(vcs_buildpath) $(BENDER) $(config_file) Makefile ../Bender.yml $(GF12_SRAM_SRCS) $(shell find src -type f) $(shell find ../config -type f) $(shell find include -type f) $(shell find tb -type f) $(shell find deps -type f)
 	$(BENDER) script vcs --vlogan-bin=$(vlogan_cmd) --vhdlan-bin=$(vhdlan_cmd) \
 	$(foreach arg,$(vlogan_args),--vlog-arg=$(arg)) \
 	$(foreach arg,$(vhdlan_args),--vcom-arg=$(arg)) \
-	$(bender_targs_vcs) $(bender_defs) > $(vcs_script)
+	$(bender_targs_vcs) $(bender_defs_sim) > $(vcs_script)
+	$(GF12_VCS_INJECT) >> $(vcs_script)
 	chmod +x $(vcs_script)
 
 $(vcs_binary): $(vcs_script)
@@ -259,16 +317,16 @@ $(vcs_binary): $(vcs_script)
 	cd $(vcs_buildpath) && $(vcs_cmd) -full64 $(vcs_elab_args) \
 		-Mdir=$(notdir $(vcs_csrc_dir)) -o $(notdir $(vcs_binary)) $(top_level)
 
-sim_vcs: compile_vcs
+sim_vcs: compile_vcs $(dram_vmem)
 	set -o pipefail; cd $(vcs_buildpath) && \
-		./$(notdir $(vcs_binary)) -sv_lib $(abspath $(buildpath)/$(dpi_library)/ara_dpi) $(vcs_run_args) 2>&1 | tee transcript
+		./$(notdir $(vcs_binary)) $(vcs_run_args) 2>&1 | tee transcript
 	./scripts/return_status.sh $(vcs_buildpath)/transcript
 
 simc_vcs: sim_vcs
 
-sim_gui_vcs: compile_vcs
+sim_gui_vcs: compile_vcs $(dram_vmem)
 	set -o pipefail; cd $(vcs_buildpath) && \
-		./$(notdir $(vcs_binary)) -gui -sv_lib $(abspath $(buildpath)/$(dpi_library)/ara_dpi) $(vcs_run_args) 2>&1 | tee transcript
+		./$(notdir $(vcs_binary)) -gui $(vcs_run_args) 2>&1 | tee transcript
 	./scripts/return_status.sh $(vcs_buildpath)/transcript
 
 show_vcs:
@@ -343,13 +401,11 @@ simv:
 	cd $(sim_run_dir) && $(abspath $(veril_library)/V$(veril_top)) $(veril_trace_run_arg) $(veril_run_args) -l ram,$(abspath $(app_path))/$(app),elf
 
 simv_vcs_binary ?= $(vcs_binary)
-simv_vcs_dpi    ?= $(abspath $(buildpath)/$(dpi_library)/ara_dpi)
 .PHONY: simv_vcs
-simv_vcs:
+simv_vcs: $(dram_vmem)
 	mkdir -p $(sim_run_dir)
 	cd $(sim_run_dir) && \
 	$(simv_vcs_binary) \
-		-sv_lib $(simv_vcs_dpi) \
 		$(vcs_run_args)
 
 .PHONY: riscv_tests_simv
@@ -379,7 +435,12 @@ $(buildpath)/$(dpi_library)/%.o: tb/dpi/%.cc
 
 $(buildpath)/$(dpi_library)/ara_dpi.so: $(dpi)
 	mkdir -p $(buildpath)/$(dpi_library)
-	$(CXX) -shared -m64 -o $(buildpath)/$(dpi_library)/ara_dpi.so $?
+	@if [ -n "$(strip $(dpi))" ]; then \
+		$(CXX) -shared -m64 -o $(buildpath)/$(dpi_library)/ara_dpi.so $?; \
+	else \
+		echo "No DPI sources (ELF loader replaced by elf2vmem/\$$readmemh); creating empty stub"; \
+		: > $(buildpath)/$(dpi_library)/ara_dpi.so; \
+	fi
 
 # Clean targets
 .PHONY: clean

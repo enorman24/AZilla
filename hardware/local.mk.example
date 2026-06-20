@@ -1,0 +1,14 @@
+# Per-machine overrides for hardware/Makefile.
+# Copy to hardware/local.mk (gitignored) and edit for your environment.
+
+# --- Private GF12-hardened VRF SRAM (optional) ------------------------------
+# Directory holding the neutral wrapper `gf12_vrf_bank.sv` and the foundry SRAM
+# model, obtained from the private GF12 flow repo. Required only when building
+# with `gf12_sram=1`. The public build ignores this and uses behavioral tc_sram.
+# See hardware/docs/GF12_SRAM.md for the wrapper contract and full instructions.
+# GF12_SRAM_DIR := /path/to/gf12_flow_ssrl/sram/integration
+
+# --- DRAM preload helper (optional) -----------------------------------------
+# Python used by elf2vmem.py to build the $readmemh DRAM image. Defaults to
+# python3 on PATH; override if you need a specific interpreter.
+# VMEM_PYTHON := python3

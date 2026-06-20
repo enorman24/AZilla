@@ -6,10 +6,6 @@
 // Description:
 // Top level testbench module.
 
-import "DPI-C" function void read_elf (input string filename);
-import "DPI-C" function byte get_section (output longint address, output longint len);
-import "DPI-C" context function byte read_section(input longint address, inout byte buffer[]);
-
 `define STRINGIFY(x) `"x`"
 
 module ara_tb;
@@ -19,16 +15,16 @@ module ara_tb;
    *****************/
 
   `ifndef VERILATOR
-  timeunit      1ns;
-  timeprecision 1ps;
+    timeunit      1ns;
+    timeprecision 1ps;
   `endif
 
-`ifdef VCS
-  initial begin
-    $fsdbDumpfile("waveform.fsdb");
-    $fsdbDumpvars(0, "+struct");
-  end
-`endif
+  `ifdef VCS
+    initial begin
+      $fsdbDumpfile("waveform.fsdb");
+      $fsdbDumpvars(0, "+struct", "+mda");
+    end
+  `endif
 
   `ifdef NR_LANES
   localparam NrLanes = `NR_LANES;
@@ -49,11 +45,7 @@ module ara_tb;
   localparam AxiAddrWidth          = 64;
   localparam AxiWideDataWidth      = 32 * NrLanes * NrClusters;
   localparam ClusterAxiDataWidth   = 32 * NrLanes;
-  localparam AxiWideBeWidth    = AxiWideDataWidth / 8;
-  localparam AxiWideByteOffset = $clog2(AxiWideBeWidth);
-
-  localparam DRAMAddrBase = 64'h8000_0000;
-  localparam DRAMLength   = 64'h4000_0000; // 1GByte of DDR (split between two chips on Genesys2)
+  localparam AxiWideBeWidth = AxiWideDataWidth / 8;
 
   /********************************
    *  Clock and Reset Generation  *
@@ -108,51 +100,11 @@ module ara_tb;
    *  DRAM Initialization  *
    *************************/
 
-  typedef logic [AxiAddrWidth-1:0] addr_t;
+  // Program preload now happens inside i_dram (tc_sram.sv) via
+  // $readmemh(+DRAM_INIT_FILE, init_val) at time zero; the `sram <= init_val` reset copy
+  // carries it into the live array. Generate the vmem with hardware/scripts/elf2vmem.py.
+
   typedef logic [AxiWideDataWidth-1:0] data_t;
-
-  initial begin : dram_init
-    automatic data_t mem_row;
-    byte buffer [];
-    addr_t address;
-    addr_t length;
-    string binary;
-
-    // tc_sram is initialized with zeros. We need to overwrite this value.
-    repeat (2)
-      #ClockPeriod;
-
-    // Initialize memories
-    void'($value$plusargs("PRELOAD=%s", binary));
-    if (binary != "") begin
-      // Read ELF
-      read_elf(binary);
-      $display("Loading ELF file %s", binary);
-      while (get_section(address, length)) begin
-        // Read sections
-        automatic int nwords = (length + AxiWideBeWidth - 1)/AxiWideBeWidth;
-        $display("Loading section %x of length %x", address, length);
-        buffer = new[nwords * AxiWideBeWidth];
-        void'(read_section(address, buffer));
-        // Initializing memories
-        for (int w = 0; w < nwords; w++) begin
-          mem_row = '0;
-          for (int b = 0; b < AxiWideBeWidth; b++) begin
-            mem_row[8 * b +: 8] = buffer[w * AxiWideBeWidth + b];
-          end
-          if (address >= DRAMAddrBase && address < DRAMAddrBase + DRAMLength)
-            // This requires the sections to be aligned to AxiWideByteOffset,
-            // otherwise, they can be over-written.
-            dut.i_ara_soc.i_dram.init_val[(address - DRAMAddrBase + (w << AxiWideByteOffset)) >> AxiWideByteOffset] = mem_row;
-          else
-            $display("Cannot initialize address %x, which doesn't fall into the L2 region.", address);
-        end
-      end
-    end else begin
-      $error("Expecting a firmware to run, none was provided!");
-      $finish;
-    end
-  end : dram_init
 
 `ifndef TARGET_GATESIM
 

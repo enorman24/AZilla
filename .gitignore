@@ -63,6 +63,14 @@ build/
 
 # Per-machine path overrides (copy from local.mk.example)
 tvm-apps/local.mk
+hardware/local.mk
+
+hardware/src/lane/*.v
+**/gf12_vrf_bank.sv
+
+# Generated DRAM preload images + DPI backups
+*.vmem
+hardware/tb/dpi/*.off
 
 # Local backup bundle
 araxl-backup.bundle

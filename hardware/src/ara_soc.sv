@@ -26,6 +26,8 @@ module ara_soc import axi_pkg::*; import ara_pkg::*; #(
     parameter  int           unsigned AxiRespDelay = 200,
     // Main memory
     parameter  int           unsigned L2NumWords   = 2**20,
+    // Optional build-time DRAM preload vmem path (runtime +DRAM_INIT_FILE overrides it)
+    parameter                          MemInitFile  = "",
     // Dependant parameters. DO NOT CHANGE!
     localparam type                   axi_data_t   = logic [AxiDataWidth-1:0],
     localparam type                   axi_strb_t   = logic [AxiDataWidth/8-1:0],
@@ -243,12 +245,17 @@ module ara_soc import axi_pkg::*; import ara_pkg::*; #(
   );
 
 `ifndef SPYGLASS
+  // TODO(GF12): the L2 DRAM (AxiDataWidth x L2NumWords, ~32 MB) is NOT a single 64x64
+  // GF12 cut. When DRAM is hardened, instantiate the appropriate large/tiled DRAM macro
+  // or a black-box here. For now DRAM stays behavioral even under GF12_SRAM_MACRO.
   tc_sram #(
-    .NumWords (L2NumWords  ),
-    .NumPorts (1           ),
-    .DataWidth(AxiDataWidth),
-    .SimInit("random"),
-    .Latency(1)
+    .NumWords    (L2NumWords  ),
+    .NumPorts    (1           ),
+    .DataWidth   (AxiDataWidth),
+    .SimInit     ("random"    ),
+    .Latency     (1           ),
+    .InitFromFile(1'b1        ),  // DRAM is the only SRAM that preloads the program
+    .MemInitFile (MemInitFile )
   ) i_dram (
     .clk_i  (clk_i                                                                      ),
     .rst_ni (rst_ni                                                                     ),

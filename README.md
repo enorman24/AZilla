@@ -177,6 +177,7 @@ For Synopsys VCS:
 
 ```bash
 cd hardware
+make apply-patches              # required: patches Bender deps (DRAM preload, etc.)
 make compile_vcs nr_clusters=4 nr_lanes=4
 app=hello_world make sim_vcs
 make show_vcs
@@ -200,6 +201,13 @@ cd hardware
 make verilate
 make riscv_tests_simv
 ```
+
+### VRF SRAM backend
+
+By default the vector register file banks use a behavioral `tc_sram` model, so all
+simulation works out of the box with no proprietary files. A GF12 hard-macro backend
+can be opted into for synthesis/hardened simulation with `gf12_sram=1` and a private,
+bring-your-own SRAM wrapper — see [`hardware/docs/GF12_SRAM.md`](hardware/docs/GF12_SRAM.md).
 
 ### Ideal Dispatcher mode
 

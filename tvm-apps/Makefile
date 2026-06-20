@@ -192,7 +192,7 @@ verilate: | $(APP_LOG_RUN_DIR)
 compile-vcs: | $(APP_LOG_RUN_DIR)
 	@set -o pipefail; { \
 		echo "=== compile-vcs nr_clusters=$(nr_clusters) nr_lanes=$(nr_lanes) mem_latency=$(mem_latency) cva6_latency=$(cva6_latency) ring_latency=$(ring_latency) $$(date -Iseconds) ==="; \
-		echo "cmd: $(VCS_ENV) make -C $(ARA_DIR)/hardware compile_vcs buildpath=$(VCS_BUILD_DIR) nr_lanes=$(nr_lanes) nr_clusters=$(nr_clusters) mem_latency=$(mem_latency) cva6_latency=$(cva6_latency) ring_latency=$(ring_latency) config=$(config)"; \
+		echo "cmd: $(VCS_ENV) make -C $(ARA_DIR)/hardware compile_vcs buildpath=$(VCS_BUILD_DIR) nr_lanes=$(nr_lanes) nr_clusters=$(nr_clusters) mem_latency=$(mem_latency) cva6_latency=$(cva6_latency) ring_latency=$(ring_latency) config=$(config) gf12_sram=$(gf12_sram)"; \
 		$(VCS_ENV) make -C $(ARA_DIR)/hardware compile_vcs \
 			buildpath=$(VCS_BUILD_DIR) \
 			nr_lanes=$(nr_lanes) \
@@ -200,7 +200,8 @@ compile-vcs: | $(APP_LOG_RUN_DIR)
 			mem_latency=$(mem_latency) \
 			cva6_latency=$(cva6_latency) \
 			ring_latency=$(ring_latency) \
-			config=$(config); \
+			config=$(config) \
+			gf12_sram=$(gf12_sram); \
 	} 2>&1 | tee -a $(APP_LOG_RUN_DIR)/compile-vcs.log; exit $${PIPESTATUS[0]}
 
 
@@ -326,7 +327,7 @@ sim: compile
 	@cp $(APP_DIR)/pipeline.json $(APP_SIM_RUN_DIR)/inputs/ 2>/dev/null || true
 	@set -o pipefail; \
 	 start=$$(date -Iseconds); \
-	 cmd="$(VCS_ENV) make -C $(ARA_DIR)/hardware simv_vcs buildpath=$(VCS_BUILD_DIR) simv_vcs_binary=$(VCS_BINARY) simv_vcs_dpi=$(VCS_DPI_LIB) app_path=$(APP_BIN_DIR) app=$(app) sim_run_dir=$(APP_SIM_RUN_DIR)"; \
+	 cmd="$(VCS_ENV) make -C $(ARA_DIR)/hardware simv_vcs buildpath=$(VCS_BUILD_DIR) simv_vcs_binary=$(VCS_BINARY) simv_vcs_dpi=$(VCS_DPI_LIB) app_path=$(APP_BIN_DIR) app=$(app) nr_lanes=$(nr_lanes) nr_clusters=$(nr_clusters) sim_run_dir=$(APP_SIM_RUN_DIR)"; \
 	 monitor_pid=""; \
 	 if [ -f "$(TVM_APPS_DIR)/scripts/sim-monitor.sh" ]; then \
 		bash "$(TVM_APPS_DIR)/scripts/sim-monitor.sh" "$(APP_SIM_RUN_DIR)" --interval 5 >/dev/null 2>&1 & \
@@ -341,6 +342,8 @@ sim: compile
 			simv_vcs_dpi=$(VCS_DPI_LIB) \
 			app_path=$(APP_BIN_DIR) \
 			app=$(app) \
+			nr_lanes=$(nr_lanes) \
+			nr_clusters=$(nr_clusters) \
 			sim_run_dir=$(APP_SIM_RUN_DIR); \
 		exit $$?; \
 	 } 2>&1 | tee $(APP_SIM_RUN_DIR)/sim.log; \

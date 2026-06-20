@@ -79,6 +79,26 @@ module vector_regfile import ara_pkg::*; #(
     assign vrf_clk = clk_i;
 `endif
 
+`ifdef GF12_SRAM_MACRO
+    // GF12-hardened bank. The wrapper (gf12_vrf_bank) and the foundry SRAM macro
+    // are kept out of this repo; they are added to the compile filelist only when
+    // the build is invoked with `gf12_sram=1` (GF12_SRAM_DIR points at them). The
+    // wrapper's port list mirrors tc_sram below, so the two backends are
+    // interchangeable. See hardware/docs/GF12_SRAM.md.
+    gf12_vrf_bank #(
+      .NumWords (NumWords ),
+      .DataWidth(DataWidth)
+    ) data_sram (
+      .clk_i  (vrf_clk                           ),
+      .rst_ni (rst_ni                            ),
+      .req_i  (req_i[bank]                       ),
+      .we_i   (wen_i[bank]                       ),
+      .be_i   (be_i[bank]                        ),
+      .addr_i (addr_i[bank][$clog2(NumWords)-1:0]),
+      .wdata_i(wdata_i[bank]                     ),
+      .rdata_o(rdata[bank]                       )
+    );
+`else
     tc_sram #(
       .NumWords (NumWords ),
       .DataWidth(DataWidth),
@@ -93,6 +113,7 @@ module vector_regfile import ara_pkg::*; #(
       .be_i   (be_i[bank]                        ),
       .addr_i (addr_i[bank][$clog2(NumWords)-1:0])
     );
+`endif
   end : gen_banks
 
   ///////////////////
