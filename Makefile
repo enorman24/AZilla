@@ -90,7 +90,7 @@ toolchain-llvm-main: git-submodules Makefile
 	-DLLVM_TARGETS_TO_BUILD="RISCV" \
 	../llvm
 	cd $(ROOT_DIR)/toolchain/riscv-llvm && \
-	$(CMAKE) --build build --target install
+	$(CMAKE) --build build --target install --parallel 24
 
 toolchain-llvm-newlib: git-submodules Makefile toolchain-llvm-main
 	cd ${ROOT_DIR}/toolchain/newlib && rm -rf build && mkdir -p build && cd build && \
@@ -129,7 +129,7 @@ toolchain-llvm-rt: git-submodules Makefile toolchain-llvm-main toolchain-llvm-ne
 	-DCMAKE_RANLIB=$(LLVM_INSTALL_DIR)/bin/llvm-ranlib \
 	-DLLVM_CONFIG_PATH=$(LLVM_INSTALL_DIR)/bin/llvm-config
 	cd $(ROOT_DIR)/toolchain/riscv-llvm/compiler-rt && \
-	$(CMAKE) --build build --target install && \
+	$(CMAKE) --build build --target install --parallel 24 && \
 	ln -sfn $(LLVM_INSTALL_DIR)/lib/linux $(LLVM_INSTALL_DIR)/lib/clang/20/lib/linux
 
 # Spike
@@ -153,7 +153,7 @@ ${ISA_SIM_MOD_INSTALL_DIR}: Makefile patches/0003-riscv-isa-sim-patch ${ISA_SIM_
 	PATH=$(ISA_SIM_MOD_INSTALL_DIR)/bin:$$PATH; cd ..; \
 	../configure --prefix=$(ISA_SIM_MOD_INSTALL_DIR) \
 	--without-boost --without-boost-asio --without-boost-regex && \
-	make -j32 && make install
+	make -j24 && make install
 
 ${ISA_SIM_INSTALL_DIR}: Makefile
 	# There are linking issues with the standard libraries when using newer CC/CXX versions to compile Spike.
@@ -167,7 +167,7 @@ ${ISA_SIM_INSTALL_DIR}: Makefile
 	PATH=$(ISA_SIM_INSTALL_DIR)/bin:$$PATH; cd ..; \
 	../configure --prefix=$(ISA_SIM_INSTALL_DIR) \
 	--without-boost --without-boost-asio --without-boost-regex && \
-	make -j32 && make install
+	make -j24 && make install
 
 # Verilator
 .PHONY: verilator
