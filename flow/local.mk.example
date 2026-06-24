@@ -1,0 +1,19 @@
+# local.mk.example — copy to local.mk (gitignored) and set machine paths.
+#
+#   cp local.mk.example local.mk
+#
+# Only set what differs from the repo defaults (the install/* tree produced by
+# AZilla/scripts/get-started.sh is assumed). Anything here overrides the Makefile.
+
+# ─── TVM (only needed for tvm: provider and manifest emission) ────────────────
+# TVM_HOME   := /path/to/tvm
+# TVM_PYTHON := conda run -n tvm-dev python
+
+# ─── Verilator (only needed for `make verilate`) ──────────────────────────────
+# VERILATOR_ROOT := /path/to/verilator
+
+# ─── EDA tools (only needed for simulator=vcs / view-sim) ─────────────────────
+# Normally inherited from your site EDA setup script (source it before make).
+# VCS_HOME       := /path/to/vcs
+# LM_LICENSE_FILE := 1234@licenseserver
+# VERDI          := verdi

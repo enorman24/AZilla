@@ -1,0 +1,7 @@
+build/
+local.mk
+# Verdi droppings (in case view-sim is launched from here)
+novas.conf
+novas.rc
+verdiLog/
+*.fsdb
