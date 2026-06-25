@@ -1,5 +1,18 @@
 build/
 local.mk
+
+# Machine-specific run history — ledger/notes/meta and the generated results
+# matrix embed absolute paths, usernames and license-server addresses. Regenerated
+# locally by `make sim` / `make status`; never pushed.
+results/
+RESULTS.md
+
+# Internal design/diagnosis docs — kept local, not published (see README.md).
+docs/
+# Provider-architecture note is folded into README.md; keep it local. (Ignore the
+# file, not the dir, so future provider driver scripts under providers/ can track.)
+providers/README.md
+
 # Verdi droppings (in case view-sim is launched from here)
 novas.conf
 novas.rc

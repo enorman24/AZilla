@@ -104,7 +104,7 @@ Makefile is the single entry point; Python generators are invoked by `make tvm-i
 | `pipeline/kernels.json` | Extern-kernel catalog: C symbol, source path, ABI, match rules |
 | `pipeline/kernels_config.py` | Catalog loader (`KernelDef`, `KernelRule`, shape inference) |
 | `pipeline/extern_primfunc.py` | `make_extern_primfunc()` helpers for `T.call_extern` wrappers |
-| `pipeline/artifacts.py` | `manifest.json`, `pipeline.json`, `make audit` / `make report` |
+| `../flow/scripts/artifacts.py` | `manifest.json`, `pipeline.json`, `make audit` / `make report` (owned by flow; consumed here) |
 
 **Models** (`models/<app>/<app>.py`) are built via:
 

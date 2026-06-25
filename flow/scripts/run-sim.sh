@@ -20,7 +20,7 @@ set -uo pipefail
 
 usage() {
     cat >&2 <<'EOF'
-usage: run-sim.sh --ara-dir DIR --simulator (verilator|vcs) --elf PATH
+usage: run-sim.sh --ara-dir DIR --simulator (verilator|vcs|spike) --elf PATH
                   --label NAME --run-dir DIR --sim-dir DIR --run-id ID
                   [hardware config + tool paths, see below]
 
@@ -40,6 +40,9 @@ hardware config (for the log header + hardware make invocation):
 
 verilator backend:
   --veril-binary PATH
+spike backend (functional RISC-V ISA-sim; c: provider only):
+  --spike-bin PATH         (install/riscv-isa-sim/bin/spike)
+  --spike-opt STR          (e.g. --isa=rv64gcv_zfh --varch=vlen:4096,elen:64)
 vcs backend:
   --vcs-binary PATH --vcs-dpi PATH --vcs-build-dir DIR
   --vcs-env STR            (env prefix string, may be empty)
@@ -61,6 +64,7 @@ CONFIG="default"; NRC="2"; NRL="4"; MEMLAT="0"; CVA6LAT="0"; RINGLAT="0"
 TRACE="0"; SIM_CYCLE_ARG=""
 VERIL_BINARY=""
 VCS_BINARY=""; VCS_DPI=""; VCS_BUILD_DIR=""; VCS_ENV=""; RETURN_STATUS=""
+SPIKE_BIN=""; SPIKE_OPT=""
 SPIKE_DASM=""; MONITOR=""
 SNAPSHOTS=()
 
@@ -82,6 +86,8 @@ while [[ $# -gt 0 ]]; do
         --trace)         TRACE="$2"; shift 2;;
         --sim-cycle-arg) SIM_CYCLE_ARG="$2"; shift 2;;
         --veril-binary)  VERIL_BINARY="$2"; shift 2;;
+        --spike-bin)     SPIKE_BIN="$2"; shift 2;;
+        --spike-opt)     SPIKE_OPT="$2"; shift 2;;
         --vcs-binary)    VCS_BINARY="$2"; shift 2;;
         --vcs-dpi)       VCS_DPI="$2"; shift 2;;
         --vcs-build-dir) VCS_BUILD_DIR="$2"; shift 2;;
@@ -129,6 +135,15 @@ if [[ "$SIMULATOR" == "verilator" ]]; then
     fi
     VERIL_LIB="$(dirname "$VERIL_BINARY")/"
     cmd="make -C \"$ARA_DIR/hardware\" simv veril_library=\"$VERIL_LIB\" app_path=\"$APP_PATH\" app=\"$APP\" trace=$TRACE_ENABLED sim_run_dir=\"$RUN_DIR\" veril_run_args='$SIM_CYCLE_ARG'"
+elif [[ "$SIMULATOR" == "spike" ]]; then
+    if [[ ! -f "$SPIKE_BIN" ]]; then
+        echo "ERROR: Spike binary not found at $SPIKE_BIN. Build/install it (AZilla/install/riscv-isa-sim) — see AZilla 'make riscv-isa-sim'." >&2
+        echo 1 > "$RUN_DIR/.sim_rc"; echo "$(date -Iseconds)" > "$RUN_DIR/.sim_end"; exit 1
+    fi
+    # Spike runs the ELF directly. $SPIKE_OPT is left UNQUOTED in $cmd so eval
+    # word-splits it into its two flags (--isa=… and --varch=…, both space-free);
+    # only the binary + ELF paths are quote-wrapped to survive spaces.
+    cmd="\"$SPIKE_BIN\" $SPIKE_OPT \"$ELF\""
 elif [[ "$SIMULATOR" == "vcs" ]]; then
     if [[ ! -f "$VCS_BINARY" ]]; then
         echo "ERROR: VCS binary not found at $VCS_BINARY. Run 'make compile-vcs' first." >&2
@@ -190,6 +205,29 @@ fi
             printf "WARNING: raw hart trace not found at %s\n" "$RAW_DASM"
         fi
         exit "$sim_rc"
+    elif [[ "$SIMULATOR" == "spike" ]]; then
+        # Plain spike emits no trace_hart_00.dasm, so the spike-dasm FIFO path
+        # above is skipped. Capture spike's combined output to a side file so we
+        # decide pass/fail from what it PRINTED, not from $? alone: spike returns
+        # exit_code()=main()'s return value UNCLAMPED, which the OS truncates to 8
+        # bits — so a failure returning a nonzero multiple of 256 (e.g. a verify()
+        # mismatch index of 256) would masquerade as rc=0. On any HTIF failure
+        # spike still prints '*** FAILED *** (tohost = N)' with N untruncated.
+        spike_out="$RUN_DIR/.spike_out"
+        eval "$cmd" 2>&1 | tee "$spike_out"; sim_rc=${PIPESTATUS[0]}
+        # artifacts.py derives the outcome from a 'Core Test *** SUCCESS/FAIL ***'
+        # line; spike prints neither on PASS, so emit a synthetic banner. SUCCESS
+        # only if spike exited cleanly AND printed no failure marker; else FAIL —
+        # and force a nonzero rc when a real failure code truncated to 0, so the
+        # make/ledger gate agrees with the banner and the manifest outcome.
+        if [[ $sim_rc -eq 0 ]] && ! grep -qE '\*\*\* FAILED \*\*\*|tohost = [1-9]' "$spike_out"; then
+            printf 'Core Test *** SUCCESS *** (spike functional ISA-sim)\n'
+        else
+            printf 'Core Test *** FAIL *** (spike functional ISA-sim, rc=%s)\n' "$sim_rc"
+            [[ $sim_rc -eq 0 ]] && sim_rc=1
+        fi
+        rm -f "$spike_out"
+        exit "$sim_rc"
     else
         eval "$cmd"; exit $?
     fi
@@ -203,6 +241,14 @@ fi
 
 # Stop the monitor.
 if [[ -n "$monitor_pid" ]]; then kill "$monitor_pid" 2>/dev/null || true; wait "$monitor_pid" 2>/dev/null || true; fi
+
+# Capture the program's output-data dump per-run, if the testbench produced one.
+# The VCS/Questa tb writes every AXI store to OutResultFile (gold_results.txt) one
+# level above the run dir, where it would be clobbered by the next run; move it in.
+# (The Verilator tb emits no such dump — nothing to capture there.)
+for g in gold_results.txt id_results.txt; do
+    [[ -f "$RUN_DIR/../$g" ]] && mv -f "$RUN_DIR/../$g" "$RUN_DIR/$g" 2>/dev/null || true
+done
 
 echo "$(date -Iseconds)" > "$RUN_DIR/.sim_end"
 echo "$rc" > "$RUN_DIR/.sim_rc"

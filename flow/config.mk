@@ -35,12 +35,25 @@ ring_latency := 0
 gf12_sram :=
 
 # ─── Simulation ──────────────────────────────────────────────────────────────
-# simulator: verilator | vcs
+# simulator: verilator | vcs | spike
+#   verilator/vcs = cycle-accurate AraXL RTL sim (timing + functional).
+#   spike         = functional RISC-V ISA-sim (Spike). Validates correctness only
+#                   (no AraXL timing/cycles, no multi-cluster modelling). Supported
+#                   for the `c` provider ONLY — it runs a separately-linked GCC +
+#                   HTIF .spike ELF built via apps/Makefile; tvm/tilelang/prebuilt
+#                   ELFs exit via the RTL path, not HTIF, so they can't run on Spike.
 simulator := verilator
 # sim_cycles: stop after N simulated cycles (empty = run to program exit)
 sim_cycles :=
 # trace: Verilator FST tracing; needs a trace binary (`make verilate trace=1`)
 trace := 0
+
+# ─── TVM codegen (tvm: provider only) ─────────────────────────────────────────
+# How the tvm provider turns TVM's emitted IR into an object:
+#   asm -> assemble TVM's own LLVM-22-generated .s   (default; bit-exact correct)
+#   ir  -> recompile the .ll with AraXL's clang-20    (legacy; MISCOMPILES TVM-22
+#          IR — e.g. qwen3_toy's split/rms_norm diverge. A/B debugging only.)
+tvm_codegen := asm
 
 # ─── Build parallelism (verilate) ─────────────────────────────────────────────
 verilate_jobs    := 8

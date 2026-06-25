@@ -6,6 +6,7 @@ import hashlib
 import json
 import re
 import stat
+import subprocess
 from pathlib import Path
 from typing import Dict, Iterable, List, Optional
 
@@ -48,6 +49,17 @@ def _parse_sim_results(run_dir: str, return_code: int = 0) -> Dict:
     m = re.search(r"Simulation speed:\s+([0-9.]+)\s*cycles/s", text)
     if m:
         results["sim_speed_cycles_per_s"] = float(m.group(1))
+    # [hw-cycles] is printed by the testbench on BOTH simulators; it's the only
+    # cycle count VCS emits (VCS never prints Verilator's "Executed cycles").
+    hw = re.findall(r"\[hw-cycles\]:\s+(\d+)", text)
+    if hw:
+        results["hw_cycles"] = int(hw[-1])
+    # Resolved cycle count for summary/report: prefer Verilator's executed-cycles
+    # total, else fall back to the on-chip hw-cycles counter (so VCS isn't 'n/a').
+    if "executed_cycles" in results:
+        results["cycles"], results["cycles_source"] = results["executed_cycles"], "executed"
+    elif "hw_cycles" in results:
+        results["cycles"], results["cycles_source"] = results["hw_cycles"], "hw-cycles"
     m = re.search(r"tohost = (\d+)", text)
     if m:
         results["tohost"] = int(m.group(1))
@@ -125,6 +137,15 @@ def _write_repro_sh(run_dir: str, env_vars: List[str], make_command: str) -> str
     return str(out)
 
 
+def _fmt_cycles(results: Dict) -> str:
+    """Resolved cycle count + its source (executed vs hw-cycles), or n/a."""
+    c = results.get("cycles")
+    if c is None:
+        return "n/a"
+    src = results.get("cycles_source")
+    return f"{c} ({src})" if src else str(c)
+
+
 def _write_summary(run_dir: str, data: dict) -> None:
     """Write summary.txt with human-readable sim outcome after a run."""
     results = data.get("results", {})
@@ -133,7 +154,7 @@ def _write_summary(run_dir: str, data: dict) -> None:
         f"run_id:       {data.get('run_id', '')}",
         f"outcome:      {results.get('outcome', 'unknown')}",
         f"return_code:  {data.get('return_code', '')}",
-        f"cycles:       {results.get('executed_cycles', 'n/a')}",
+        f"cycles:       {_fmt_cycles(results)}",
         f"wallclock:    {results.get('wallclock_time_s', 'n/a')} s",
         f"sim_speed:    {results.get('sim_speed_cycles_per_s', 'n/a')} cycles/s",
         f"tohost:       {results.get('tohost', 'n/a')}",
@@ -461,7 +482,7 @@ def report(args: argparse.Namespace) -> int:
         print(f"run_id:      {data.get('run_id', '')}")
         print(f"outcome:     {results.get('outcome', 'unknown')}")
         print(f"return_code: {data.get('return_code', '')}")
-        print(f"cycles:      {results.get('executed_cycles', 'n/a')}")
+        print(f"cycles:      {_fmt_cycles(results)}")
         print(f"tohost:      {results.get('tohost', 'n/a')}")
         print(f"elf_sha256:  {data.get('inputs_sha256', {}).get('elf', 'n/a')}")
         print(f"start:       {data.get('start_time', '')}")
@@ -473,6 +494,289 @@ def report(args: argparse.Namespace) -> int:
         print("")
         print("--- summary ---")
         print(summary_path.read_text(encoding="utf-8"))
+    return 0
+
+
+# ── results ledger + status matrix ──────────────────────────────────────────
+def _git_commit(path: str) -> str:
+    """Short git commit at `path`, or "" if unavailable (3.6-safe subprocess)."""
+    try:
+        out = subprocess.check_output(
+            ["git", "-C", str(path), "rev-parse", "--short", "HEAD"],
+            stderr=subprocess.DEVNULL)
+        return out.decode("utf-8", "replace").strip()
+    except Exception:
+        return ""
+
+
+def _ledger_record(m: Dict) -> Dict:
+    """Flatten a sim manifest.json into one ledger row (everything to re-run)."""
+    app = m.get("app", "")
+    provider = app.split(":", 1)[0] if ":" in app else ""
+    cfg = m.get("configuration", {})
+    res = m.get("results", {})
+    inh = m.get("inputs_sha256", {})
+    elf = m.get("elf", "")
+    git_commit = tvm_version = ""
+    if elf:
+        envp = Path(elf).parent / "env.json"
+        if envp.exists():
+            try:
+                e = json.loads(envp.read_text(encoding="utf-8"))
+                git_commit = e.get("git_commit", "")
+                tvm_version = e.get("tvm_version", "")
+            except Exception:
+                pass
+    # Capture the commit directly for providers without an env.json (c/prebuilt).
+    if not git_commit and elf:
+        git_commit = _git_commit(Path(elf).parent)
+    return {
+        "ts": (m.get("start_time") or "")[:16],
+        "app": app, "provider": provider,
+        "simulator": m.get("simulator", ""),
+        "config": cfg.get("config", ""),
+        "nr_clusters": cfg.get("nr_clusters"), "nr_lanes": cfg.get("nr_lanes"),
+        "mem_lat": cfg.get("mem_latency"), "cva6_lat": cfg.get("cva6_latency"),
+        "ring_lat": cfg.get("ring_latency"), "trace": cfg.get("trace"),
+        "outcome": res.get("outcome", ""), "tohost": res.get("tohost"),
+        "cycles": res.get("cycles"), "cycles_src": res.get("cycles_source", ""),
+        # Both metrics kept separately so the table can show them in distinct
+        # columns: hw_cycles = on-chip vector-busy counter (both sims print it);
+        # executed_cycles = Verilator whole-program total (Verilator only).
+        "hw_cycles": res.get("hw_cycles"), "executed_cycles": res.get("executed_cycles"),
+        "elf_sha256": inh.get("elf", ""),
+        "ir_sha256": inh.get("compat_llvm_ir") or inh.get("llvm_ir", ""),
+        "git_commit": git_commit, "tvm_version": tvm_version,
+        "run_id": m.get("run_id", ""), "command": m.get("command", ""),
+        "repro_sh": m.get("repro_sh", ""),
+    }
+
+
+def _read_ledger(path: str) -> List[Dict]:
+    p = Path(path)
+    if not p.exists():
+        return []
+    rows = []
+    for line in p.read_text(encoding="utf-8").splitlines():
+        line = line.strip()
+        if not line:
+            continue
+        try:
+            rows.append(json.loads(line))
+        except Exception:
+            pass
+    return rows
+
+
+def ledger_append(args: argparse.Namespace) -> int:
+    """Append one run (from its sim manifest.json) to the results ledger."""
+    m = json.loads(Path(args.manifest).read_text(encoding="utf-8"))
+    rec = _ledger_record(m)
+    out = Path(args.ledger)
+    out.parent.mkdir(parents=True, exist_ok=True)
+    with out.open("a", encoding="utf-8") as f:
+        f.write(json.dumps(rec) + "\n")
+    return 0
+
+
+def _ledger_import(ledger_path: str, glob_pat: str):
+    """Merge on-disk sim manifests into the ledger (dedup by app+run_id; never
+    loses history). Re-derives results from each run's sim.log with the current
+    parser. Returns (newly_added, total)."""
+    import glob
+    rows = {(r.get("app"), r.get("run_id")): r for r in _read_ledger(ledger_path)}
+    added = 0
+    for mp in sorted(glob.glob(glob_pat)):
+        try:
+            m = json.loads(Path(mp).read_text(encoding="utf-8"))
+        except Exception:
+            continue
+        if "run_id" not in m or "simulator" not in m:
+            continue
+        run_dir = str(Path(mp).parent)
+        if (Path(run_dir) / "sim.log").exists():
+            m["results"] = _parse_sim_results(run_dir, m.get("return_code", 0))
+        rec = _ledger_record(m)
+        key = (rec["app"], rec["run_id"])
+        if key not in rows:
+            added += 1
+        rows[key] = rec
+    recs = sorted(rows.values(), key=lambda r: (r.get("ts", ""), r.get("run_id", "")))
+    out = Path(ledger_path)
+    out.parent.mkdir(parents=True, exist_ok=True)
+    out.write_text("".join(json.dumps(r) + "\n" for r in recs), encoding="utf-8")
+    return added, len(recs)
+
+
+def ledger_backfill(args: argparse.Namespace) -> int:
+    """Import on-disk sim manifests into the ledger (CLI wrapper)."""
+    added, total = _ledger_import(args.ledger, args.glob)
+    print(f"ledger: {total} runs ({added} newly imported) -> {args.ledger}")
+    return 0
+
+
+def _catalog(ara_dir: str) -> List[str]:
+    """Every runnable program, mirroring `make list-apps` exclusions."""
+    import glob
+    apps = []
+    for p in glob.glob(f"{ara_dir}/apps/*/main.c"):
+        n = Path(p).parent.name
+        if n != "benchmarks":
+            apps.append(f"c:{n}")
+    for base in ("kernels", "models"):
+        for d in glob.glob(f"{ara_dir}/tvm-apps/{base}/*/"):
+            n = Path(d).name
+            if n == "common":
+                continue
+            if (Path(d) / f"{n}.py").exists():
+                apps.append(f"tvm:{n}")
+    for d in glob.glob(f"{ara_dir}/tilelang-apps/*/"):
+        apps.append(f"tilelang:{Path(d).name}")
+    return sorted(set(apps))
+
+
+# Plain ASCII status words — emoji are double-width and break monospace alignment.
+_OUTCOME_WORD = {"SUCCESS": "PASS", "FAILED": "FAIL", "INCOMPLETE": "incomplete"}
+
+
+def _render_table(cols: List[str], rows: List[List[str]]) -> str:
+    """A monospace-aligned Markdown pipe table (every column padded to its width)."""
+    widths = [len(c) for c in cols]
+    for row in rows:
+        for i, cell in enumerate(row):
+            widths[i] = max(widths[i], len(cell))
+    def fmt(cells):
+        return "| " + " | ".join(c.ljust(widths[i]) for i, c in enumerate(cells)) + " |"
+    sep = "|" + "|".join("-" * (w + 2) for w in widths) + "|"
+    return "\n".join([fmt(cols), sep] + [fmt(r) for r in rows]) + "\n"
+
+
+def status(args: argparse.Namespace) -> int:
+    """Render the latest-run-per-full-hardware-config results matrix to RESULTS.md
+    + stdout. Always re-imports on-disk run manifests first (so it's up to date)."""
+    if getattr(args, "backfill_glob", ""):
+        added, total = _ledger_import(args.ledger, args.backfill_glob)
+        print(f"ledger: {total} runs ({added} newly imported)")
+
+    rows = _read_ledger(args.ledger)
+    # Latest run per FULL hardware config — every knob is part of the identity, so
+    # the same kernel at different clusters / lanes / latencies / trace / simulator
+    # each gets its own row (rather than collapsing to one "latest").
+    def geom_key(r):
+        return (r.get("app"), r.get("simulator"), r.get("config"),
+                r.get("nr_clusters"), r.get("nr_lanes"),
+                r.get("mem_lat"), r.get("cva6_lat"), r.get("ring_lat"), r.get("trace"))
+    latest = {}  # type: Dict
+    for r in rows:
+        key = geom_key(r)
+        cur = latest.get(key)
+        if cur is None or (r.get("ts", ""), r.get("run_id", "")) >= (cur.get("ts", ""), cur.get("run_id", "")):
+            latest[key] = r
+    by_app = {}  # type: Dict
+    for r in latest.values():
+        by_app.setdefault(r.get("app"), []).append(r)
+
+    def _load_json(path):
+        if path and Path(path).exists():
+            try:
+                return json.loads(Path(path).read_text(encoding="utf-8"))
+            except Exception:
+                return {}
+        return {}
+    notes = _load_json(args.notes)
+    # Static per-program identity (what it computes / size / how many runs), keyed
+    # by program id — declared, not derived (some sizes aren't in def_args).
+    meta = _load_json(getattr(args, "meta", ""))
+
+    catalog = _catalog(args.ara_dir) if args.ara_dir else sorted(by_app)
+    for a in by_app:
+        if a not in catalog:
+            catalog.append(a)
+    catalog = sorted(set(catalog))
+
+    def s(v):
+        return "-" if v is None or v == "" else str(v)
+
+    def vec_cell(r):
+        # On-chip vector-busy cycles (both sims print [hw-cycles]); 0 = no vector work.
+        h = r.get("hw_cycles")
+        if h is None:
+            return "-"
+        return "0 (no-vec)" if h == 0 else str(h)
+
+    def tohost_cell(v):
+        # Fail sentinel (2^63-1) is 19 digits and bloats the column; Result already says FAIL.
+        return "FAIL" if str(v) in ("9223372036854775807", "0x7fffffffffffffff") else s(v)
+
+    # Columns: static identity (Computes/Size/Runs, from meta.json) + every run knob
+    # + the two cycle metrics in distinct columns (never conflated).
+    cols = ["Program", "Computes", "Size", "Runs", "Result", "Sim", "config",
+            "nc", "nl", "mem", "cva6", "ring", "trace",
+            "Vec-cyc(hw)", "Whole-prog", "tohost", "Date", "Run id", "Notes"]
+    trows = []  # type: List[List[str]]
+    for app in catalog:
+        m = meta.get(app, {})
+        ident = [app, s(m.get("computes")), s(m.get("size")), s(m.get("runs"))]
+        note = notes.get(app, "")
+        # Cap the free-text Notes column so an over-long note can't blow out the
+        # monospace table width and wrap every row (full detail lives in flow/docs/,
+        # e.g. BROKEN_PROGRAMS_DIAGNOSIS.md). ASCII "..." keeps single-width alignment.
+        if len(note) > 60:
+            note = note[:57].rstrip() + "..."
+        recs = sorted(by_app.get(app, []), key=lambda r: (
+            s(r.get("simulator")), s(r.get("config")),
+            r.get("nr_clusters") or 0, r.get("nr_lanes") or 0,
+            r.get("mem_lat") or 0, r.get("cva6_lat") or 0, r.get("ring_lat") or 0, s(r.get("trace"))))
+        if not recs:
+            trows.append(ident + ["untested"] + ["-"] * 13 + [note])
+            continue
+        for r in recs:
+            res = _OUTCOME_WORD.get(r.get("outcome", ""), r.get("outcome") or "?")
+            date = (r.get("ts") or "")[:10] or "-"
+            trows.append(ident + [
+                res, s(r.get("simulator")), s(r.get("config")),
+                s(r.get("nr_clusters")), s(r.get("nr_lanes")),
+                s(r.get("mem_lat")), s(r.get("cva6_lat")), s(r.get("ring_lat")),
+                s(r.get("trace")), vec_cell(r), s(r.get("executed_cycles")),
+                tohost_cell(r.get("tohost")), date, s(r.get("run_id")), note,
+            ])
+
+    # Drop latency columns left at default (0/-) for every row: they remain part of
+    # row identity (kept when any row is non-default) but are pure width when all zero.
+    for _name in ("ring", "cva6", "mem"):
+        _i = cols.index(_name)
+        if all(row[_i] in ("0", "-") for row in trows):
+            del cols[_i]
+            for _row in trows:
+                del _row[_i]
+
+    npass = sum(1 for r in latest.values() if r.get("outcome") == "SUCCESS")
+    hdr = (
+        "# AraXL flow — program results\n\n"
+        "_Auto-generated by `make status` (re-imports all on-disk runs, then renders). "
+        "Do not edit by hand — put known-issue notes in `flow/results/notes.json`. "
+        "One row = the **latest** run for a full hardware config: every knob "
+        "(sim, config, nc=nr_clusters, nl=nr_lanes, mem/cva6/ring latency, trace) is "
+        "part of the row identity, so the same program at different settings shows "
+        "separately (mem/cva6/ring latency columns are hidden when every row is at the "
+        "default 0, and reappear if any row is non-default). Never-run programs are "
+        "`untested`. Re-run a row exactly via its "
+        "run's `repro.sh` (by Run id); a differing `elf_sha256` (in the ledger) means "
+        "the source changed._\n\n"
+        "_Computes/Size/Runs come from `flow/results/meta.json` (declared per program — "
+        "they explain why cycle counts differ: different problem size and number of "
+        "kernel invocations). The two cycle columns are distinct metrics, never "
+        "compared: **Vec-cyc(hw)** = on-chip vector-busy cycles (cumulative across the "
+        "run's kernel calls; `0 (no-vec)` = pure-scalar); **Whole-prog** = Verilator's "
+        "whole-program total (includes boot + scalar refs + printf-over-serial)._\n\n"
+        + "```\n" + _render_table(cols, trows) + "```\n\n"
+        + "_{} result(s) across {} program(s); {} passing._\n".format(len(latest), len(catalog), npass)
+    )
+    if args.out:
+        Path(args.out).write_text(hdr, encoding="utf-8")
+    print(hdr)
+    if args.out:
+        print("Wrote " + args.out)
     return 0
 
 
@@ -554,6 +858,25 @@ def main(argv: Optional[List[str]] = None) -> int:
     rep.add_argument("--run-dir", required=True)
     rep.add_argument("--app", default="")
     rep.set_defaults(func=report)
+
+    la = sub.add_parser("ledger-append", help="append one run to results/ledger.jsonl")
+    la.add_argument("--manifest", required=True)
+    la.add_argument("--ledger", required=True)
+    la.set_defaults(func=ledger_append)
+
+    lb = sub.add_parser("ledger-backfill", help="import on-disk sim manifests into the ledger (merge)")
+    lb.add_argument("--glob", required=True)
+    lb.add_argument("--ledger", required=True)
+    lb.set_defaults(func=ledger_backfill)
+
+    st = sub.add_parser("status", help="render the latest-per-(app,sim,config) results matrix")
+    st.add_argument("--ledger", required=True)
+    st.add_argument("--ara-dir", default="")
+    st.add_argument("--notes", default="")
+    st.add_argument("--meta", default="", help="per-program identity sidecar (computes/size/runs)")
+    st.add_argument("--out", default="")
+    st.add_argument("--backfill-glob", default="", help="import matching on-disk manifests before rendering")
+    st.set_defaults(func=status)
 
     args = parser.parse_args(argv)
     return args.func(args)
