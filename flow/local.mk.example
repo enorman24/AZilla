@@ -1,0 +1,33 @@
+# local.mk.example — copy to local.mk (gitignored) and set whatever differs from
+# the repo defaults on your machine:
+#
+#   cp local.mk.example local.mk
+#
+# Everything here is optional: the defaults assume the standard AZilla layout (the
+# install/ toolchain tree built by the top-level repo `make`). Uncomment only the
+# lines you need. Command-line `VAR=val` always wins over both.
+
+# ─── RISC-V toolchain / simulators (default: <repo>/install/...) ──────────────
+# Set these if your toolchain or Spike lives outside the in-repo install/ tree.
+# INSTALL_DIR         := /path/to/install        # parent of the dirs below
+# GCC_INSTALL_DIR     := /path/to/riscv-gcc      # GCC (spike .spike ELFs)
+# LLVM_INSTALL_DIR    := /path/to/riscv-llvm     # clang (verilator/vcs ELFs)
+# ISA_SIM_INSTALL_DIR := /path/to/riscv-isa-sim  # provides bin/spike + spike-dasm
+# VERILATOR_ROOT      := /path/to/verilator      # only for `make verilate`
+
+# ─── TVM (only the tvm: provider needs this) ──────────────────────────────────
+# TVM_HOME   := /path/to/tvm                     # default: <repo>/../tools/tvm
+# TVM_PYTHON := conda run -n <your-env> python   # env with TVM importable
+
+# ─── Run-management python (manifests/ledger/status) ──────────────────────────
+# Pure-stdlib; system python3 by default. Override only if python3 isn't on PATH.
+# ARTIFACTS_PYTHON := /path/to/python3
+
+# ─── EDA tools (only for simulator=vcs / view-sim) ────────────────────────────
+# Normally inherited from your site EDA setup script (source it before make).
+# VCS_HOME        := /path/to/vcs
+# LM_LICENSE_FILE := <port>@<license-server>
+# VERDI           := verdi
+
+# ─── Repo root (auto-derived from flow/'s location; set only in odd layouts) ──
+# ARA_DIR := /path/to/AZilla
