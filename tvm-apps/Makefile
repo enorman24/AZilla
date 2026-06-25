@@ -2,6 +2,9 @@ SHELL = /usr/bin/env bash
 
 ROOT_DIR := $(patsubst %/,%, $(dir $(abspath $(lastword $(MAKEFILE_LIST)))))
 TVM_APPS_DIR := $(ROOT_DIR)
+# Run-management tooling (artifacts.py, sim-monitor.sh) now lives in flow/ (the
+# source of truth); tvm-apps consumes it from there.
+FLOW_DIR := $(abspath $(ROOT_DIR)/../flow)
 ARA_DIR := $(shell git rev-parse --show-toplevel 2>/dev/null || echo $$ARA_DIR)
 ARTIFACTS_DIR := $(ROOT_DIR)/build
 COMMON_DIR := $(ARA_DIR)/apps/common
@@ -45,6 +48,15 @@ RAW_DASM := $(APP_SIM_RUN_DIR)/trace_hart_00.dasm
 SPIKE_DASM_LOG := $(APP_SIM_RUN_DIR)/trace_hart_00.log
 
 LL_FILE := $(APP_TVM_DIR)/$(app).ll
+S_FILE  := $(APP_TVM_DIR)/$(app).s
+# TVM emits both .ll and .s. AraXL's riscv-clang is LLVM 20.x while TVM's LLVM is
+# 22.x; recompiling the .ll through clang-20's backend MISCOMPILES it (proven on
+# qwen3_toy: kernels produce wrong results in opt-level-dependent ways, while the
+# x86 host build of the same IR is bit-exact). Assembling TVM's own
+# LLVM-22-generated .s bypasses clang-20's backend and is bit-exact correct.
+#   tvm_codegen=asm  -> assemble TVM's .s   (default; correct)
+#   tvm_codegen=ir   -> recompile the .ll with clang-20 (legacy; miscompiles)
+tvm_codegen ?= asm
 MAIN_C := $(firstword \
 	$(wildcard $(KERNEL_DIR)/$(app)/$(app)_main.c) \
 	$(wildcard $(MODEL_DIR)/$(app)/$(app)_main.c))
@@ -100,8 +112,8 @@ TVM_OUTPUT_ENV   := ARAXL_APP_IR_DIR="$(APP_IR_DIR)" ARAXL_APP_TVM_DIR="$(APP_TV
 TVM_MANIFEST_ENV := PYTHONPATH=$(TVM_APPS_DIR):$(TVM_PYTHONPATH):$$PYTHONPATH TVM_HOME=$(TVM_HOME) TVM_LIBRARY_PATH=$(TVM_LIBRARY_PATH)
 # Verilator — defaults to the AraXL-bundled install from scripts/get-started.sh.
 VERILATOR_ROOT   ?= $(ARA_DIR)/install/verilator
-APP_MANIFEST_CMD = $(TVM_MANIFEST_ENV) $(TVM_PYTHON) $(TVM_APPS_DIR)/pipeline/artifacts.py app-manifest --output "$(APP_MANIFEST)" --app "$(app)" --app-kind "$(APP_KIND)" --generator "$(GENERATOR_PY)" --main-c "$(MAIN_C)" $(foreach dep,$(KERNEL_DEPS),--kernel-dep "$(dep)") --target-triple "riscv64-unknown-elf" --target-mattr "+v,+m,+f,+d" --target-abi "lp64d" --config "$(config)" --nr-clusters "$(nr_clusters)" --nr-lanes "$(nr_lanes)" --mem-latency "$(mem_latency)" --cva6-latency "$(cva6_latency)" --ring-latency "$(ring_latency)" --trace "$(trace_status)" --tool "TVM_PYTHON=$(TVM_PYTHON)" --tool "RISCV_CC=$(RISCV_CC)" --tool "RISCV_OBJDUMP=$(RISCV_OBJDUMP)" --tool "RISCV_STRIP=$(RISCV_STRIP)" --tool "VERILATOR_BINARY=$(VERIL_BINARY)" --app-dir "$(APP_DIR)" --ir-dir "$(APP_IR_DIR)" --tvm-dir "$(APP_TVM_DIR)" --obj-dir "$(APP_OBJ_DIR)" --bin-dir "$(APP_BIN_DIR)" --sim-dir "$(APP_SIM_DIR)" --elf "$(ELF)" --llvm-ir "$(LL_FILE)" --compat-llvm-ir "$(LL_COMPAT)" --linker-script "$(LINK_LD)" --verilator-binary "$(VERIL_BINARY)"
-APP_AUDIT_CMD = $(TVM_MANIFEST_ENV) $(TVM_PYTHON) $(TVM_APPS_DIR)/pipeline/artifacts.py audit --app "$(app)" --app-kind "$(APP_KIND)" --generator "$(GENERATOR_PY)" --main-c "$(MAIN_C)" --app-dir "$(APP_DIR)" --ir-dir "$(APP_IR_DIR)" --tvm-dir "$(APP_TVM_DIR)" --obj-dir "$(APP_OBJ_DIR)" --bin-dir "$(APP_BIN_DIR)" --sim-dir "$(APP_SIM_DIR)" --elf "$(ELF)" --llvm-ir "$(LL_FILE)" --compat-llvm-ir "$(LL_COMPAT)" --linker-script "$(LINK_LD)" --verilator-binary "$(VERIL_BINARY)"
+APP_MANIFEST_CMD = $(TVM_MANIFEST_ENV) $(TVM_PYTHON) $(FLOW_DIR)/scripts/artifacts.py app-manifest --output "$(APP_MANIFEST)" --app "$(app)" --app-kind "$(APP_KIND)" --generator "$(GENERATOR_PY)" --main-c "$(MAIN_C)" $(foreach dep,$(KERNEL_DEPS),--kernel-dep "$(dep)") --target-triple "riscv64-unknown-elf" --target-mattr "+v,+m,+f,+d" --target-abi "lp64d" --config "$(config)" --nr-clusters "$(nr_clusters)" --nr-lanes "$(nr_lanes)" --mem-latency "$(mem_latency)" --cva6-latency "$(cva6_latency)" --ring-latency "$(ring_latency)" --trace "$(trace_status)" --tool "TVM_PYTHON=$(TVM_PYTHON)" --tool "RISCV_CC=$(RISCV_CC)" --tool "RISCV_OBJDUMP=$(RISCV_OBJDUMP)" --tool "RISCV_STRIP=$(RISCV_STRIP)" --tool "VERILATOR_BINARY=$(VERIL_BINARY)" --app-dir "$(APP_DIR)" --ir-dir "$(APP_IR_DIR)" --tvm-dir "$(APP_TVM_DIR)" --obj-dir "$(APP_OBJ_DIR)" --bin-dir "$(APP_BIN_DIR)" --sim-dir "$(APP_SIM_DIR)" --elf "$(ELF)" --llvm-ir "$(LL_FILE)" --compat-llvm-ir "$(LL_COMPAT)" --linker-script "$(LINK_LD)" --verilator-binary "$(VERIL_BINARY)"
+APP_AUDIT_CMD = $(TVM_MANIFEST_ENV) $(TVM_PYTHON) $(FLOW_DIR)/scripts/artifacts.py audit --app "$(app)" --app-kind "$(APP_KIND)" --generator "$(GENERATOR_PY)" --main-c "$(MAIN_C)" --app-dir "$(APP_DIR)" --ir-dir "$(APP_IR_DIR)" --tvm-dir "$(APP_TVM_DIR)" --obj-dir "$(APP_OBJ_DIR)" --bin-dir "$(APP_BIN_DIR)" --sim-dir "$(APP_SIM_DIR)" --elf "$(ELF)" --llvm-ir "$(LL_FILE)" --compat-llvm-ir "$(LL_COMPAT)" --linker-script "$(LINK_LD)" --verilator-binary "$(VERIL_BINARY)"
 
 .PHONY: compile compile-kernel compile-model clean-build clean-sim clean-all-build clean-all-sim distclean linker_script sim verilate compile-vcs view-sim help tvm-ir check-main show-artifacts write-app-manifest audit report check-symbols monitor monitor-latest
 .PRECIOUS: $(RUNTIME_LLVM)
@@ -128,7 +140,7 @@ $(ARAXL_LIB): $(KERNEL_DEP_OBJS) | $(LIB_DIR) $(APP_LOG_RUN_DIR)
 # compile the app binary (kernel or model)
 compile: check-main $(ELF)
 	@$(APP_MANIFEST_CMD)
-	@$(TVM_MANIFEST_ENV) $(TVM_PYTHON) $(TVM_APPS_DIR)/pipeline/artifacts.py env-snapshot \
+	@$(TVM_MANIFEST_ENV) $(TVM_PYTHON) $(FLOW_DIR)/scripts/artifacts.py env-snapshot \
 		--output "$(APP_BIN_DIR)/env.json" \
 		--riscv-cc "$(RISCV_CC)" \
 		--git-dir "$(ROOT_DIR)"
@@ -221,8 +233,8 @@ sim: compile
 	 start=$$(date -Iseconds); \
 	 cmd="make -C $(ARA_DIR)/hardware simv veril_library=$(dir $(VERIL_BINARY)) app_path=$(APP_BIN_DIR) app=$(app) trace=$(trace_enabled) sim_run_dir=$(APP_SIM_RUN_DIR) veril_run_args='$(SIM_CYCLE_ARG)'"; \
 	 monitor_pid=""; \
-	 if [ -f "$(TVM_APPS_DIR)/scripts/sim-monitor.sh" ]; then \
-		bash "$(TVM_APPS_DIR)/scripts/sim-monitor.sh" "$(APP_SIM_RUN_DIR)" --interval 5 >/dev/null 2>&1 & \
+	 if [ -f "$(FLOW_DIR)/scripts/sim-monitor.sh" ]; then \
+		bash "$(FLOW_DIR)/scripts/sim-monitor.sh" "$(APP_SIM_RUN_DIR)" --interval 5 >/dev/null 2>&1 & \
 		monitor_pid=$$!; \
 	 fi; \
 	 { \
@@ -286,7 +298,7 @@ sim: compile
 		wait "$$monitor_pid" 2>/dev/null || true; \
 	 fi; \
 	 end=$$(date -Iseconds); \
-	 $(TVM_MANIFEST_ENV) $(TVM_PYTHON) $(TVM_APPS_DIR)/pipeline/artifacts.py sim-manifest \
+	 $(TVM_MANIFEST_ENV) $(TVM_PYTHON) $(FLOW_DIR)/scripts/artifacts.py sim-manifest \
 		--output "$(APP_SIM_RUN_DIR)/manifest.json" \
 		--app "$(app)" \
 		--run-id "$(RUN_ID)" \
@@ -328,8 +340,8 @@ sim: compile
 	 start=$$(date -Iseconds); \
 	 cmd="$(VCS_ENV) make -C $(ARA_DIR)/hardware simv_vcs buildpath=$(VCS_BUILD_DIR) simv_vcs_binary=$(VCS_BINARY) simv_vcs_dpi=$(VCS_DPI_LIB) app_path=$(APP_BIN_DIR) app=$(app) sim_run_dir=$(APP_SIM_RUN_DIR)"; \
 	 monitor_pid=""; \
-	 if [ -f "$(TVM_APPS_DIR)/scripts/sim-monitor.sh" ]; then \
-		bash "$(TVM_APPS_DIR)/scripts/sim-monitor.sh" "$(APP_SIM_RUN_DIR)" --interval 5 >/dev/null 2>&1 & \
+	 if [ -f "$(FLOW_DIR)/scripts/sim-monitor.sh" ]; then \
+		bash "$(FLOW_DIR)/scripts/sim-monitor.sh" "$(APP_SIM_RUN_DIR)" --interval 5 >/dev/null 2>&1 & \
 		monitor_pid=$$!; \
 	 fi; \
 	 { \
@@ -354,7 +366,7 @@ sim: compile
 		rc=$$?; \
 	 fi; \
 	 end=$$(date -Iseconds); \
-	 $(TVM_MANIFEST_ENV) $(TVM_PYTHON) $(TVM_APPS_DIR)/pipeline/artifacts.py sim-manifest \
+	 $(TVM_MANIFEST_ENV) $(TVM_PYTHON) $(FLOW_DIR)/scripts/artifacts.py sim-manifest \
 		--output "$(APP_SIM_RUN_DIR)/manifest.json" \
 		--app "$(app)" \
 		--run-id "$(RUN_ID)" \
@@ -474,6 +486,16 @@ else
 	@exit 1
 endif
 
+# TVM emits the .s alongside the .ll; (re)generate both via tvm-ir if missing.
+$(S_FILE):
+ifneq ($(GENERATOR_PY),)
+	make --no-print-directory tvm-ir app=$(app) RUN_ID=$(RUN_ID)
+else
+	@echo "ERROR: Missing ASM file: $(S_FILE)"
+	@echo "Run 'make tvm-ir app=$(app)' first, or use tvm_codegen=ir."
+	@exit 1
+endif
+
 # Strip LLVM 21+ attributes unknown to AraXL riscv-llvm 20.x (nocreateundeforpoison)
 $(LL_COMPAT): $(LL_FILE) | $(APP_OBJ_DIR) $(APP_LOG_RUN_DIR)
 	@set -o pipefail; { \
@@ -482,12 +504,23 @@ $(LL_COMPAT): $(LL_FILE) | $(APP_OBJ_DIR) $(APP_LOG_RUN_DIR)
 		sed 's/ nocreateundeforpoison//g' $< > $@; \
 	} 2>&1 | tee -a $(APP_LOG_RUN_DIR)/compile.log; exit $${PIPESTATUS[0]}
 
+ifeq ($(tvm_codegen),asm)
+# Assemble TVM's own LLVM-22-generated riscv assembly (correct; see note above).
+$(TVM_OBJ): $(S_FILE) | $(APP_OBJ_DIR) $(APP_LOG_RUN_DIR)
+	@set -o pipefail; { \
+		echo "=== assemble TVM object (from .s) $$(date -Iseconds) ==="; \
+		echo "cmd: $(RISCV_CC) $(RISCV_CCFLAGS) -c $< -o $@"; \
+		$(RISCV_CC) $(RISCV_CCFLAGS) -c $< -o $@; \
+	} 2>&1 | tee -a $(APP_LOG_RUN_DIR)/compile.log; exit $${PIPESTATUS[0]}
+else
+# Legacy: recompile the .ll through clang-20 (known to miscompile TVM-22 IR).
 $(TVM_OBJ): $(LL_COMPAT) | $(APP_OBJ_DIR) $(APP_LOG_RUN_DIR)
 	@set -o pipefail; { \
-		echo "=== compile TVM object $$(date -Iseconds) ==="; \
+		echo "=== compile TVM object (from .ll) $$(date -Iseconds) ==="; \
 		echo "cmd: $(RISCV_CC) $(RISCV_CCFLAGS) -x ir -c $< -o $@"; \
 		$(RISCV_CC) $(RISCV_CCFLAGS) -x ir -c $< -o $@; \
 	} 2>&1 | tee -a $(APP_LOG_RUN_DIR)/compile.log; exit $${PIPESTATUS[0]}
+endif
 
 
 check-main:
@@ -541,7 +574,7 @@ audit: | $(APP_DIR)
 
 # Print summary for a sim run (defaults to latest; pass RUN_ID=... to target specific run).
 report:
-	@$(TVM_MANIFEST_ENV) $(TVM_PYTHON) $(TVM_APPS_DIR)/pipeline/artifacts.py report \
+	@$(TVM_MANIFEST_ENV) $(TVM_PYTHON) $(FLOW_DIR)/scripts/artifacts.py report \
 		--run-dir "$(APP_SIM_RUN_DIR)" --app "$(app)"
 
 # Fail if no function symbol containing the app name is found in the symbol table.
