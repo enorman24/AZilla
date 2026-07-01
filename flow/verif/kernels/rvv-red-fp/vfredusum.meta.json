@@ -1,0 +1,8 @@
+{
+  "mnemonic": "vfredusum",
+  "group": "rvv-red-fp",
+  "ext": "RVV",
+  "expected": "supported",
+  "variants": [],
+  "note": "unordered FP sum: order impl-defined, pin inputs for diff"
+}

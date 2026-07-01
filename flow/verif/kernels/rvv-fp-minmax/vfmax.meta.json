@@ -1,0 +1,8 @@
+{
+  "mnemonic": "vfmax",
+  "group": "rvv-fp-minmax",
+  "ext": "RVV",
+  "expected": "supported",
+  "variants": [],
+  "note": ""
+}

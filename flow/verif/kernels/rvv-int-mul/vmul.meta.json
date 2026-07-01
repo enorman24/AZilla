@@ -1,0 +1,8 @@
+{
+  "mnemonic": "vmul",
+  "group": "rvv-int-mul",
+  "ext": "RVV",
+  "expected": "supported",
+  "variants": [],
+  "note": ""
+}

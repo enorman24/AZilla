@@ -1,0 +1,8 @@
+{
+  "mnemonic": "vfwredosum",
+  "group": "rvv-red-fp",
+  "ext": "RVV",
+  "expected": "supported",
+  "variants": [],
+  "note": "widening ordered FP sum"
+}

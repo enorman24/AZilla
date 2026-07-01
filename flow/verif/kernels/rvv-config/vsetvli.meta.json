@@ -1,0 +1,8 @@
+{
+  "mnemonic": "vsetvli",
+  "group": "rvv-config",
+  "ext": "RVV",
+  "expected": "supported",
+  "variants": [],
+  "note": "sets vl/vtype; exercised by every vector kernel"
+}

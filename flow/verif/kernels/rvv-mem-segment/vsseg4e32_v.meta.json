@@ -1,0 +1,8 @@
+{
+  "mnemonic": "vsseg4e32.v",
+  "group": "rvv-mem-segment",
+  "ext": "RVV",
+  "expected": "blocked_silent",
+  "variants": [],
+  "note": "unit-stride segment store: silent mis-decode"
+}

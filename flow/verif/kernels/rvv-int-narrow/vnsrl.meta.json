@@ -1,0 +1,8 @@
+{
+  "mnemonic": "vnsrl",
+  "group": "rvv-int-narrow",
+  "ext": "RVV",
+  "expected": "supported",
+  "variants": [],
+  "note": "narrowing logical shift right"
+}

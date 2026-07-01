@@ -1,0 +1,8 @@
+{
+  "mnemonic": "vnmsac",
+  "group": "rvv-int-muladd",
+  "ext": "RVV",
+  "expected": "supported",
+  "variants": [],
+  "note": ""
+}

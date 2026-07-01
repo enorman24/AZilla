@@ -1,0 +1,8 @@
+{
+  "mnemonic": "auipc",
+  "group": "rv64i-imm",
+  "ext": "RV64",
+  "expected": "supported",
+  "variants": [],
+  "note": ""
+}

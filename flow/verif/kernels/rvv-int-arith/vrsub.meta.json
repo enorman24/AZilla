@@ -1,0 +1,8 @@
+{
+  "mnemonic": "vrsub",
+  "group": "rvv-int-arith",
+  "ext": "RVV",
+  "expected": "supported",
+  "variants": [],
+  "note": "reverse subtract"
+}

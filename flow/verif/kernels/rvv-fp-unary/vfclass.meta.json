@@ -1,0 +1,8 @@
+{
+  "mnemonic": "vfclass",
+  "group": "rvv-fp-unary",
+  "ext": "RVV",
+  "expected": "supported",
+  "variants": [],
+  "note": ""
+}

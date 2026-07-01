@@ -1,0 +1,8 @@
+{
+  "mnemonic": "vsetivli",
+  "group": "rvv-config",
+  "ext": "RVV",
+  "expected": "supported",
+  "variants": [],
+  "note": "immediate AVL form"
+}

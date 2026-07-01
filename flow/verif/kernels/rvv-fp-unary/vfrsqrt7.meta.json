@@ -1,0 +1,8 @@
+{
+  "mnemonic": "vfrsqrt7",
+  "group": "rvv-fp-unary",
+  "ext": "RVV",
+  "expected": "supported",
+  "variants": [],
+  "note": "7-bit approx; oracle MUST be Spike"
+}

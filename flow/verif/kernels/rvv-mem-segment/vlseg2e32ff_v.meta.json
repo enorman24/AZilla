@@ -1,0 +1,8 @@
+{
+  "mnemonic": "vlseg2e32ff.v",
+  "group": "rvv-mem-segment",
+  "ext": "RVV",
+  "expected": "blocked_illegal",
+  "variants": [],
+  "note": "fault-only-first segment load: ff lumop traps illegal regardless of nf"
+}

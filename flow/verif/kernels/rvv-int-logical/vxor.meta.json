@@ -1,0 +1,8 @@
+{
+  "mnemonic": "vxor",
+  "group": "rvv-int-logical",
+  "ext": "RVV",
+  "expected": "supported",
+  "variants": [],
+  "note": ""
+}

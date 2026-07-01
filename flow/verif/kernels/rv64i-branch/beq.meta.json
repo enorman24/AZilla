@@ -1,0 +1,8 @@
+{
+  "mnemonic": "beq",
+  "group": "rv64i-branch",
+  "ext": "RV64",
+  "expected": "supported",
+  "variants": [],
+  "note": ""
+}

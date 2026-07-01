@@ -1,0 +1,8 @@
+{
+  "mnemonic": "remw",
+  "group": "rv64m",
+  "ext": "RV64",
+  "expected": "supported",
+  "variants": [],
+  "note": ""
+}

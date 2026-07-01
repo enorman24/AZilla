@@ -1,0 +1,8 @@
+{
+  "mnemonic": "vmulh",
+  "group": "rvv-int-mul",
+  "ext": "RVV",
+  "expected": "supported",
+  "variants": [],
+  "note": "high bits, signed"
+}

@@ -1,0 +1,8 @@
+{
+  "mnemonic": "fclass.d",
+  "group": "rv64d-misc",
+  "ext": "RV64",
+  "expected": "supported",
+  "variants": [],
+  "note": ""
+}

@@ -1,0 +1,8 @@
+{
+  "mnemonic": "slt",
+  "group": "rv64i-reg",
+  "ext": "RV64",
+  "expected": "supported",
+  "variants": [],
+  "note": ""
+}

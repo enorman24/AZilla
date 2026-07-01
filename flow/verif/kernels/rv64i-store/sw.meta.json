@@ -1,0 +1,8 @@
+{
+  "mnemonic": "sw",
+  "group": "rv64i-store",
+  "ext": "RV64",
+  "expected": "supported",
+  "variants": [],
+  "note": ""
+}

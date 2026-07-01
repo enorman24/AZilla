@@ -1,0 +1,8 @@
+{
+  "mnemonic": "scalar_basic",
+  "group": "rv64-scalar",
+  "ext": "RV64",
+  "expected": "supported",
+  "variants": [],
+  "note": "representative RV64 I/M/F/D/Zicsr ops"
+}

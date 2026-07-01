@@ -1,0 +1,8 @@
+{
+  "mnemonic": "vmv.s.x",
+  "group": "rvv-mask-xmv",
+  "ext": "RVV",
+  "expected": "supported",
+  "variants": [],
+  "note": "x reg -> element0"
+}

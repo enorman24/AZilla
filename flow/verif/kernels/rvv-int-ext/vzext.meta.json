@@ -1,0 +1,8 @@
+{
+  "mnemonic": "vzext",
+  "group": "rvv-int-ext",
+  "ext": "RVV",
+  "expected": "supported",
+  "variants": [],
+  "note": "zero-extend vf2/vf4/vf8"
+}

@@ -1,0 +1,8 @@
+{
+  "mnemonic": "vmv1r.v",
+  "group": "rvv-perm",
+  "ext": "RVV",
+  "expected": "supported",
+  "variants": [],
+  "note": "whole-register move (decoded as VMERGE)"
+}

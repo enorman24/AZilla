@@ -1,0 +1,8 @@
+{
+  "mnemonic": "fnmsub.d",
+  "group": "rv64d-fma",
+  "ext": "RV64",
+  "expected": "supported",
+  "variants": [],
+  "note": ""
+}

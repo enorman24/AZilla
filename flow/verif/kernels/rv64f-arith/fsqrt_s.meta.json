@@ -1,0 +1,8 @@
+{
+  "mnemonic": "fsqrt.s",
+  "group": "rv64f-arith",
+  "ext": "RV64",
+  "expected": "supported",
+  "variants": [],
+  "note": ""
+}

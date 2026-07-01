@@ -1,0 +1,8 @@
+{
+  "mnemonic": "vredsum",
+  "group": "rvv-red-int",
+  "ext": "RVV",
+  "expected": "supported",
+  "variants": [],
+  "note": "integer sum reduction; vd[0] extraction"
+}

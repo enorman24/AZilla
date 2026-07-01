@@ -1,0 +1,8 @@
+{
+  "mnemonic": "vs4r.v",
+  "group": "rvv-mem-whole",
+  "ext": "RVV",
+  "expected": "supported",
+  "variants": [],
+  "note": "whole-register store, 4 reg(s)"
+}

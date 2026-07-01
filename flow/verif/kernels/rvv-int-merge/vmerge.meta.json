@@ -1,0 +1,8 @@
+{
+  "mnemonic": "vmerge",
+  "group": "rvv-int-merge",
+  "ext": "RVV",
+  "expected": "supported",
+  "variants": [],
+  "note": "mask-driven merge"
+}

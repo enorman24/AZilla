@@ -1,0 +1,8 @@
+{
+  "mnemonic": "vmsbc",
+  "group": "rvv-int-carry",
+  "ext": "RVV",
+  "expected": "supported",
+  "variants": [],
+  "note": "produce borrow-out mask"
+}

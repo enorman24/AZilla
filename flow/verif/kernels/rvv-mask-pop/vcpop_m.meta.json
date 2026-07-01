@@ -1,0 +1,8 @@
+{
+  "mnemonic": "vcpop.m",
+  "group": "rvv-mask-pop",
+  "ext": "RVV",
+  "expected": "supported",
+  "variants": [],
+  "note": "population count of mask"
+}

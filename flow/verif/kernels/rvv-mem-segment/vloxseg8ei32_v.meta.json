@@ -1,0 +1,8 @@
+{
+  "mnemonic": "vloxseg8ei32.v",
+  "group": "rvv-mem-segment",
+  "ext": "RVV",
+  "expected": "blocked_silent",
+  "variants": [],
+  "note": "indexed-ordered segment load: silent mis-decode"
+}

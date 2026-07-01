@@ -1,0 +1,8 @@
+{
+  "mnemonic": "vfmv.s.f",
+  "group": "rvv-fp-scalar",
+  "ext": "RVV",
+  "expected": "supported",
+  "variants": [],
+  "note": "f reg -> element0"
+}

@@ -155,3 +155,4 @@ endif
 
 include $(FLOW_DIR)/sim-run.mk
 include $(FLOW_DIR)/targets.mk
+include $(FLOW_DIR)/verif/verif.mk

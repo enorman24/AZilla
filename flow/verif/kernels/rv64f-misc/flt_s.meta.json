@@ -1,0 +1,8 @@
+{
+  "mnemonic": "flt.s",
+  "group": "rv64f-misc",
+  "ext": "RV64",
+  "expected": "supported",
+  "variants": [],
+  "note": ""
+}

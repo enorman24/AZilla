@@ -1,0 +1,8 @@
+{
+  "mnemonic": "srlw",
+  "group": "rv64i-word",
+  "ext": "RV64",
+  "expected": "supported",
+  "variants": [],
+  "note": ""
+}

@@ -1,0 +1,8 @@
+{
+  "mnemonic": "vfncvt",
+  "group": "rvv-fp-cvt",
+  "ext": "RVV",
+  "expected": "supported",
+  "variants": [],
+  "note": "narrowing convert (incl round-to-odd)"
+}

@@ -1,0 +1,8 @@
+{
+  "mnemonic": "vlseg2e32",
+  "group": "rvv-mem-segment",
+  "ext": "RVV",
+  "expected": "blocked_silent",
+  "variants": [],
+  "note": "unit-stride segment load; AraXL silently mis-decodes -> expect FAIL_INCORRECT"
+}

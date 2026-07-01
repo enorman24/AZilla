@@ -1,0 +1,8 @@
+{
+  "mnemonic": "amoxor.w",
+  "group": "rv64a",
+  "ext": "RV64",
+  "expected": "supported",
+  "variants": [],
+  "note": ""
+}

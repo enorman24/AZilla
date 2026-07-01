@@ -1,0 +1,8 @@
+{
+  "mnemonic": "vsrl",
+  "group": "rvv-int-shift",
+  "ext": "RVV",
+  "expected": "supported",
+  "variants": [],
+  "note": ""
+}

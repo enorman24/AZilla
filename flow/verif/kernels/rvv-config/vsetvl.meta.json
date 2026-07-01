@@ -1,0 +1,8 @@
+{
+  "mnemonic": "vsetvl",
+  "group": "rvv-config",
+  "ext": "RVV",
+  "expected": "supported",
+  "variants": [],
+  "note": "register vtype form"
+}

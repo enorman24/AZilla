@@ -1,0 +1,8 @@
+{
+  "mnemonic": "vsbc",
+  "group": "rvv-int-carry",
+  "ext": "RVV",
+  "expected": "supported",
+  "variants": [],
+  "note": "subtract-with-borrow"
+}

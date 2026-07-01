@@ -1,0 +1,8 @@
+{
+  "mnemonic": "csrrwi",
+  "group": "zicsr",
+  "ext": "RV64",
+  "expected": "supported",
+  "variants": [],
+  "note": "read/write CSR (e.g. vl, vtype, fcsr, cycle)"
+}

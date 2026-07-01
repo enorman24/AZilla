@@ -1,0 +1,8 @@
+{
+  "mnemonic": "vmfge",
+  "group": "rvv-fp-cmp",
+  "ext": "RVV",
+  "expected": "supported",
+  "variants": [],
+  "note": ""
+}

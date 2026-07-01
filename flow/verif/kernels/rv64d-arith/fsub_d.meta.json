@@ -1,0 +1,8 @@
+{
+  "mnemonic": "fsub.d",
+  "group": "rv64d-arith",
+  "ext": "RV64",
+  "expected": "supported",
+  "variants": [],
+  "note": ""
+}

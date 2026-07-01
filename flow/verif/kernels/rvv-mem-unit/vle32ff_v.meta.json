@@ -1,0 +1,8 @@
+{
+  "mnemonic": "vle32ff.v",
+  "group": "rvv-mem-unit",
+  "ext": "RVV",
+  "expected": "blocked_illegal",
+  "variants": [],
+  "note": "fault-only-first load: dispatcher raises illegal (TODO not implemented)"
+}

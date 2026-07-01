@@ -1,0 +1,8 @@
+{
+  "mnemonic": "vluxei32.v",
+  "group": "rvv-mem-indexed",
+  "ext": "RVV",
+  "expected": "supported",
+  "variants": [],
+  "note": "indexed-unordered (gather) load"
+}

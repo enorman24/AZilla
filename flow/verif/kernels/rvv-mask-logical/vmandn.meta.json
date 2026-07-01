@@ -1,0 +1,8 @@
+{
+  "mnemonic": "vmandn",
+  "group": "rvv-mask-logical",
+  "ext": "RVV",
+  "expected": "supported",
+  "variants": [],
+  "note": "and-not (a & ~b)"
+}

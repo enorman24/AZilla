@@ -1,0 +1,8 @@
+{
+  "mnemonic": "vmflt",
+  "group": "rvv-fp-cmp",
+  "ext": "RVV",
+  "expected": "supported",
+  "variants": [],
+  "note": ""
+}

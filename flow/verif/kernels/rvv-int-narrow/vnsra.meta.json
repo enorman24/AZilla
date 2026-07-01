@@ -1,0 +1,8 @@
+{
+  "mnemonic": "vnsra",
+  "group": "rvv-int-narrow",
+  "ext": "RVV",
+  "expected": "supported",
+  "variants": [],
+  "note": "narrowing arithmetic shift right"
+}

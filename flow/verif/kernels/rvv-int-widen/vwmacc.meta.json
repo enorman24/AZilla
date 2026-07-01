@@ -1,0 +1,8 @@
+{
+  "mnemonic": "vwmacc",
+  "group": "rvv-int-widen",
+  "ext": "RVV",
+  "expected": "supported",
+  "variants": [],
+  "note": ""
+}

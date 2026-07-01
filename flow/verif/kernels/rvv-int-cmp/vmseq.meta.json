@@ -1,0 +1,8 @@
+{
+  "mnemonic": "vmseq",
+  "group": "rvv-int-cmp",
+  "ext": "RVV",
+  "expected": "supported",
+  "variants": [],
+  "note": "integer compare to mask; vsm.v extraction"
+}

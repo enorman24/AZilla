@@ -1,0 +1,8 @@
+{
+  "mnemonic": "vadd",
+  "group": "rvv-int-arith",
+  "ext": "RVV",
+  "expected": "supported",
+  "variants": ["vv e8/e16/e32/e64 m1 tail", "vv e32 m2/m8/mf2", "vx", "vi", "masked(mu)", "vl=0"],
+  "note": "OPIVV/VX/VI integer add; representative-broad SEW/LMUL/mask/edge sweep"
+}

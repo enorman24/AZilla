@@ -1,0 +1,8 @@
+{
+  "mnemonic": "vid.v",
+  "group": "rvv-mask-iota",
+  "ext": "RVV",
+  "expected": "supported",
+  "variants": [],
+  "note": "element index"
+}

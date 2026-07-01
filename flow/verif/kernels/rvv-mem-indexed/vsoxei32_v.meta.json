@@ -1,0 +1,8 @@
+{
+  "mnemonic": "vsoxei32.v",
+  "group": "rvv-mem-indexed",
+  "ext": "RVV",
+  "expected": "supported",
+  "variants": [],
+  "note": "indexed-ordered (scatter) store"
+}

@@ -1,0 +1,8 @@
+{
+  "mnemonic": "vl8re64.v",
+  "group": "rvv-mem-whole",
+  "ext": "RVV",
+  "expected": "supported",
+  "variants": [],
+  "note": "whole-register load EEW64, 8 reg(s)"
+}

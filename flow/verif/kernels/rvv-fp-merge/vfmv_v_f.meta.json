@@ -1,0 +1,8 @@
+{
+  "mnemonic": "vfmv.v.f",
+  "group": "rvv-fp-merge",
+  "ext": "RVV",
+  "expected": "supported",
+  "variants": [],
+  "note": "FP splat"
+}

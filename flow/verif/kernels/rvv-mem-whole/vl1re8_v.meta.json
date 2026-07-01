@@ -1,0 +1,8 @@
+{
+  "mnemonic": "vl1re8.v",
+  "group": "rvv-mem-whole",
+  "ext": "RVV",
+  "expected": "supported",
+  "variants": [],
+  "note": "whole-register load, 1 reg(s)"
+}

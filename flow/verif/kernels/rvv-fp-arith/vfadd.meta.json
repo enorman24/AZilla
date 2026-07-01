@@ -1,0 +1,8 @@
+{
+  "mnemonic": "vfadd",
+  "group": "rvv-fp-arith",
+  "ext": "RVV",
+  "expected": "supported",
+  "variants": [],
+  "note": ""
+}

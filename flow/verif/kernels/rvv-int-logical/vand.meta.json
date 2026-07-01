@@ -1,0 +1,8 @@
+{
+  "mnemonic": "vand",
+  "group": "rvv-int-logical",
+  "ext": "RVV",
+  "expected": "supported",
+  "variants": [],
+  "note": ""
+}

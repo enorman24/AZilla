@@ -1,0 +1,8 @@
+{
+  "mnemonic": "vl1re64.v",
+  "group": "rvv-mem-whole",
+  "ext": "RVV",
+  "expected": "supported",
+  "variants": [],
+  "note": "whole-register load EEW64, 1 reg(s)"
+}

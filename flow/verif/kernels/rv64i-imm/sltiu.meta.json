@@ -1,0 +1,8 @@
+{
+  "mnemonic": "sltiu",
+  "group": "rv64i-imm",
+  "ext": "RV64",
+  "expected": "supported",
+  "variants": [],
+  "note": ""
+}

@@ -1,0 +1,8 @@
+{
+  "mnemonic": "amomax.d",
+  "group": "rv64a",
+  "ext": "RV64",
+  "expected": "supported",
+  "variants": [],
+  "note": ""
+}

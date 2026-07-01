@@ -1,0 +1,8 @@
+{
+  "mnemonic": "vfredosum",
+  "group": "rvv-red-fp",
+  "ext": "RVV",
+  "expected": "supported",
+  "variants": [],
+  "note": "ordered FP sum (sequential)"
+}

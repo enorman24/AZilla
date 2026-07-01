@@ -1,0 +1,8 @@
+{
+  "mnemonic": "vfmv.f.s",
+  "group": "rvv-fp-scalar",
+  "ext": "RVV",
+  "expected": "supported",
+  "variants": [],
+  "note": "extract element0 -> f reg"
+}

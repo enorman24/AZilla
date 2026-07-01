@@ -1,0 +1,8 @@
+{
+  "mnemonic": "vremu",
+  "group": "rvv-int-div",
+  "ext": "RVV",
+  "expected": "supported",
+  "variants": [],
+  "note": ""
+}

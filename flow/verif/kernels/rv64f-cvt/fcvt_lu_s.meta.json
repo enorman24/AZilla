@@ -1,0 +1,8 @@
+{
+  "mnemonic": "fcvt.lu.s",
+  "group": "rv64f-cvt",
+  "ext": "RV64",
+  "expected": "supported",
+  "variants": [],
+  "note": ""
+}

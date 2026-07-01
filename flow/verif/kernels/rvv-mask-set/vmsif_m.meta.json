@@ -1,0 +1,8 @@
+{
+  "mnemonic": "vmsif.m",
+  "group": "rvv-mask-set",
+  "ext": "RVV",
+  "expected": "supported",
+  "variants": [],
+  "note": "set-including-first"
+}

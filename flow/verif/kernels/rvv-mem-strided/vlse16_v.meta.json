@@ -1,0 +1,8 @@
+{
+  "mnemonic": "vlse16.v",
+  "group": "rvv-mem-strided",
+  "ext": "RVV",
+  "expected": "supported",
+  "variants": [],
+  "note": "strided load"
+}

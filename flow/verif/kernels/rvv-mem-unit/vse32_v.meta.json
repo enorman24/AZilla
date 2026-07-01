@@ -1,0 +1,8 @@
+{
+  "mnemonic": "vse32.v",
+  "group": "rvv-mem-unit",
+  "ext": "RVV",
+  "expected": "supported",
+  "variants": [],
+  "note": "unit-stride store (extraction primitive: verify early)"
+}

@@ -1,0 +1,8 @@
+{
+  "mnemonic": "vsse8.v",
+  "group": "rvv-mem-strided",
+  "ext": "RVV",
+  "expected": "supported",
+  "variants": [],
+  "note": "strided store"
+}

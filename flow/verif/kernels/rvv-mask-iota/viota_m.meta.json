@@ -1,0 +1,8 @@
+{
+  "mnemonic": "viota.m",
+  "group": "rvv-mask-iota",
+  "ext": "RVV",
+  "expected": "supported",
+  "variants": [],
+  "note": "prefix sum of mask"
+}

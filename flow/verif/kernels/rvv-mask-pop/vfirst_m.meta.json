@@ -1,0 +1,8 @@
+{
+  "mnemonic": "vfirst.m",
+  "group": "rvv-mask-pop",
+  "ext": "RVV",
+  "expected": "supported",
+  "variants": [],
+  "note": "index of first set bit (-1 if none)"
+}

@@ -1,0 +1,8 @@
+{
+  "mnemonic": "vcompress",
+  "group": "rvv-perm",
+  "ext": "RVV",
+  "expected": "blocked_illegal",
+  "variants": [],
+  "note": "not in op enum -> dispatcher illegal"
+}

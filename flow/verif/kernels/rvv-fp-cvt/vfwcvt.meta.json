@@ -1,0 +1,8 @@
+{
+  "mnemonic": "vfwcvt",
+  "group": "rvv-fp-cvt",
+  "ext": "RVV",
+  "expected": "supported",
+  "variants": [],
+  "note": "widening convert"
+}

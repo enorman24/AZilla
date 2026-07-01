@@ -1,0 +1,8 @@
+{
+  "mnemonic": "vfmsub",
+  "group": "rvv-fp-muladd",
+  "ext": "RVV",
+  "expected": "supported",
+  "variants": [],
+  "note": ""
+}

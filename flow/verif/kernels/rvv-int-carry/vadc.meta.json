@@ -1,0 +1,8 @@
+{
+  "mnemonic": "vadc",
+  "group": "rvv-int-carry",
+  "ext": "RVV",
+  "expected": "supported",
+  "variants": [],
+  "note": "add-with-carry"
+}

@@ -1,0 +1,8 @@
+{
+  "mnemonic": "vfcvt",
+  "group": "rvv-fp-cvt",
+  "ext": "RVV",
+  "expected": "supported",
+  "variants": [],
+  "note": "same-width int<->fp convert"
+}

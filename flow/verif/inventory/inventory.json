@@ -1,0 +1,5714 @@
+[
+  {
+    "mnemonic": "vsetvli",
+    "ext": "RVV",
+    "group": "rvv-config",
+    "format": "vsetvli",
+    "forms": [
+      "x"
+    ],
+    "sew": [],
+    "expected": "supported",
+    "note": "sets vl/vtype; exercised by every vector kernel"
+  },
+  {
+    "mnemonic": "vsetivli",
+    "ext": "RVV",
+    "group": "rvv-config",
+    "format": "vsetivli",
+    "forms": [
+      "x"
+    ],
+    "sew": [],
+    "expected": "supported",
+    "note": "immediate AVL form"
+  },
+  {
+    "mnemonic": "vsetvl",
+    "ext": "RVV",
+    "group": "rvv-config",
+    "format": "vsetvl",
+    "forms": [
+      "x"
+    ],
+    "sew": [],
+    "expected": "supported",
+    "note": "register vtype form"
+  },
+  {
+    "mnemonic": "vle8.v",
+    "ext": "RVV",
+    "group": "rvv-mem-unit",
+    "format": "VL-unit",
+    "forms": [
+      "v"
+    ],
+    "sew": [
+      8
+    ],
+    "expected": "supported",
+    "note": "unit-stride load (extraction primitive: verify early)"
+  },
+  {
+    "mnemonic": "vse8.v",
+    "ext": "RVV",
+    "group": "rvv-mem-unit",
+    "format": "VS-unit",
+    "forms": [
+      "v"
+    ],
+    "sew": [
+      8
+    ],
+    "expected": "supported",
+    "note": "unit-stride store (extraction primitive: verify early)"
+  },
+  {
+    "mnemonic": "vle16.v",
+    "ext": "RVV",
+    "group": "rvv-mem-unit",
+    "format": "VL-unit",
+    "forms": [
+      "v"
+    ],
+    "sew": [
+      16
+    ],
+    "expected": "supported",
+    "note": "unit-stride load (extraction primitive: verify early)"
+  },
+  {
+    "mnemonic": "vse16.v",
+    "ext": "RVV",
+    "group": "rvv-mem-unit",
+    "format": "VS-unit",
+    "forms": [
+      "v"
+    ],
+    "sew": [
+      16
+    ],
+    "expected": "supported",
+    "note": "unit-stride store (extraction primitive: verify early)"
+  },
+  {
+    "mnemonic": "vle32.v",
+    "ext": "RVV",
+    "group": "rvv-mem-unit",
+    "format": "VL-unit",
+    "forms": [
+      "v"
+    ],
+    "sew": [
+      32
+    ],
+    "expected": "supported",
+    "note": "unit-stride load (extraction primitive: verify early)"
+  },
+  {
+    "mnemonic": "vse32.v",
+    "ext": "RVV",
+    "group": "rvv-mem-unit",
+    "format": "VS-unit",
+    "forms": [
+      "v"
+    ],
+    "sew": [
+      32
+    ],
+    "expected": "supported",
+    "note": "unit-stride store (extraction primitive: verify early)"
+  },
+  {
+    "mnemonic": "vle64.v",
+    "ext": "RVV",
+    "group": "rvv-mem-unit",
+    "format": "VL-unit",
+    "forms": [
+      "v"
+    ],
+    "sew": [
+      64
+    ],
+    "expected": "supported",
+    "note": "unit-stride load (extraction primitive: verify early)"
+  },
+  {
+    "mnemonic": "vse64.v",
+    "ext": "RVV",
+    "group": "rvv-mem-unit",
+    "format": "VS-unit",
+    "forms": [
+      "v"
+    ],
+    "sew": [
+      64
+    ],
+    "expected": "supported",
+    "note": "unit-stride store (extraction primitive: verify early)"
+  },
+  {
+    "mnemonic": "vlm.v",
+    "ext": "RVV",
+    "group": "rvv-mem-unit",
+    "format": "VL-mask",
+    "forms": [
+      "v"
+    ],
+    "sew": [
+      8
+    ],
+    "expected": "supported",
+    "note": "mask load EEW=1 (ceil(vl/8) bytes)"
+  },
+  {
+    "mnemonic": "vsm.v",
+    "ext": "RVV",
+    "group": "rvv-mem-unit",
+    "format": "VS-mask",
+    "forms": [
+      "v"
+    ],
+    "sew": [
+      8
+    ],
+    "expected": "supported",
+    "note": "mask store EEW=1"
+  },
+  {
+    "mnemonic": "vle8ff.v",
+    "ext": "RVV",
+    "group": "rvv-mem-unit",
+    "format": "VL-ff",
+    "forms": [
+      "v"
+    ],
+    "sew": [
+      8
+    ],
+    "expected": "blocked_illegal",
+    "note": "fault-only-first load: dispatcher raises illegal (TODO not implemented)"
+  },
+  {
+    "mnemonic": "vle16ff.v",
+    "ext": "RVV",
+    "group": "rvv-mem-unit",
+    "format": "VL-ff",
+    "forms": [
+      "v"
+    ],
+    "sew": [
+      16
+    ],
+    "expected": "blocked_illegal",
+    "note": "fault-only-first load: dispatcher raises illegal (TODO not implemented)"
+  },
+  {
+    "mnemonic": "vle32ff.v",
+    "ext": "RVV",
+    "group": "rvv-mem-unit",
+    "format": "VL-ff",
+    "forms": [
+      "v"
+    ],
+    "sew": [
+      32
+    ],
+    "expected": "blocked_illegal",
+    "note": "fault-only-first load: dispatcher raises illegal (TODO not implemented)"
+  },
+  {
+    "mnemonic": "vle64ff.v",
+    "ext": "RVV",
+    "group": "rvv-mem-unit",
+    "format": "VL-ff",
+    "forms": [
+      "v"
+    ],
+    "sew": [
+      64
+    ],
+    "expected": "blocked_illegal",
+    "note": "fault-only-first load: dispatcher raises illegal (TODO not implemented)"
+  },
+  {
+    "mnemonic": "vlse8.v",
+    "ext": "RVV",
+    "group": "rvv-mem-strided",
+    "format": "VL-strided",
+    "forms": [
+      "v"
+    ],
+    "sew": [
+      8
+    ],
+    "expected": "supported",
+    "note": "strided load"
+  },
+  {
+    "mnemonic": "vsse8.v",
+    "ext": "RVV",
+    "group": "rvv-mem-strided",
+    "format": "VS-strided",
+    "forms": [
+      "v"
+    ],
+    "sew": [
+      8
+    ],
+    "expected": "supported",
+    "note": "strided store"
+  },
+  {
+    "mnemonic": "vlse16.v",
+    "ext": "RVV",
+    "group": "rvv-mem-strided",
+    "format": "VL-strided",
+    "forms": [
+      "v"
+    ],
+    "sew": [
+      16
+    ],
+    "expected": "supported",
+    "note": "strided load"
+  },
+  {
+    "mnemonic": "vsse16.v",
+    "ext": "RVV",
+    "group": "rvv-mem-strided",
+    "format": "VS-strided",
+    "forms": [
+      "v"
+    ],
+    "sew": [
+      16
+    ],
+    "expected": "supported",
+    "note": "strided store"
+  },
+  {
+    "mnemonic": "vlse32.v",
+    "ext": "RVV",
+    "group": "rvv-mem-strided",
+    "format": "VL-strided",
+    "forms": [
+      "v"
+    ],
+    "sew": [
+      32
+    ],
+    "expected": "supported",
+    "note": "strided load"
+  },
+  {
+    "mnemonic": "vsse32.v",
+    "ext": "RVV",
+    "group": "rvv-mem-strided",
+    "format": "VS-strided",
+    "forms": [
+      "v"
+    ],
+    "sew": [
+      32
+    ],
+    "expected": "supported",
+    "note": "strided store"
+  },
+  {
+    "mnemonic": "vlse64.v",
+    "ext": "RVV",
+    "group": "rvv-mem-strided",
+    "format": "VL-strided",
+    "forms": [
+      "v"
+    ],
+    "sew": [
+      64
+    ],
+    "expected": "supported",
+    "note": "strided load"
+  },
+  {
+    "mnemonic": "vsse64.v",
+    "ext": "RVV",
+    "group": "rvv-mem-strided",
+    "format": "VS-strided",
+    "forms": [
+      "v"
+    ],
+    "sew": [
+      64
+    ],
+    "expected": "supported",
+    "note": "strided store"
+  },
+  {
+    "mnemonic": "vluxei8.v",
+    "ext": "RVV",
+    "group": "rvv-mem-indexed",
+    "format": "VL-idx-uo",
+    "forms": [
+      "v"
+    ],
+    "sew": [
+      8
+    ],
+    "expected": "supported",
+    "note": "indexed-unordered (gather) load"
+  },
+  {
+    "mnemonic": "vloxei8.v",
+    "ext": "RVV",
+    "group": "rvv-mem-indexed",
+    "format": "VL-idx-o",
+    "forms": [
+      "v"
+    ],
+    "sew": [
+      8
+    ],
+    "expected": "supported",
+    "note": "indexed-ordered (gather) load"
+  },
+  {
+    "mnemonic": "vsuxei8.v",
+    "ext": "RVV",
+    "group": "rvv-mem-indexed",
+    "format": "VS-idx-uo",
+    "forms": [
+      "v"
+    ],
+    "sew": [
+      8
+    ],
+    "expected": "supported",
+    "note": "indexed-unordered (scatter) store"
+  },
+  {
+    "mnemonic": "vsoxei8.v",
+    "ext": "RVV",
+    "group": "rvv-mem-indexed",
+    "format": "VS-idx-o",
+    "forms": [
+      "v"
+    ],
+    "sew": [
+      8
+    ],
+    "expected": "supported",
+    "note": "indexed-ordered (scatter) store"
+  },
+  {
+    "mnemonic": "vluxei16.v",
+    "ext": "RVV",
+    "group": "rvv-mem-indexed",
+    "format": "VL-idx-uo",
+    "forms": [
+      "v"
+    ],
+    "sew": [
+      16
+    ],
+    "expected": "supported",
+    "note": "indexed-unordered (gather) load"
+  },
+  {
+    "mnemonic": "vloxei16.v",
+    "ext": "RVV",
+    "group": "rvv-mem-indexed",
+    "format": "VL-idx-o",
+    "forms": [
+      "v"
+    ],
+    "sew": [
+      16
+    ],
+    "expected": "supported",
+    "note": "indexed-ordered (gather) load"
+  },
+  {
+    "mnemonic": "vsuxei16.v",
+    "ext": "RVV",
+    "group": "rvv-mem-indexed",
+    "format": "VS-idx-uo",
+    "forms": [
+      "v"
+    ],
+    "sew": [
+      16
+    ],
+    "expected": "supported",
+    "note": "indexed-unordered (scatter) store"
+  },
+  {
+    "mnemonic": "vsoxei16.v",
+    "ext": "RVV",
+    "group": "rvv-mem-indexed",
+    "format": "VS-idx-o",
+    "forms": [
+      "v"
+    ],
+    "sew": [
+      16
+    ],
+    "expected": "supported",
+    "note": "indexed-ordered (scatter) store"
+  },
+  {
+    "mnemonic": "vluxei32.v",
+    "ext": "RVV",
+    "group": "rvv-mem-indexed",
+    "format": "VL-idx-uo",
+    "forms": [
+      "v"
+    ],
+    "sew": [
+      32
+    ],
+    "expected": "supported",
+    "note": "indexed-unordered (gather) load"
+  },
+  {
+    "mnemonic": "vloxei32.v",
+    "ext": "RVV",
+    "group": "rvv-mem-indexed",
+    "format": "VL-idx-o",
+    "forms": [
+      "v"
+    ],
+    "sew": [
+      32
+    ],
+    "expected": "supported",
+    "note": "indexed-ordered (gather) load"
+  },
+  {
+    "mnemonic": "vsuxei32.v",
+    "ext": "RVV",
+    "group": "rvv-mem-indexed",
+    "format": "VS-idx-uo",
+    "forms": [
+      "v"
+    ],
+    "sew": [
+      32
+    ],
+    "expected": "supported",
+    "note": "indexed-unordered (scatter) store"
+  },
+  {
+    "mnemonic": "vsoxei32.v",
+    "ext": "RVV",
+    "group": "rvv-mem-indexed",
+    "format": "VS-idx-o",
+    "forms": [
+      "v"
+    ],
+    "sew": [
+      32
+    ],
+    "expected": "supported",
+    "note": "indexed-ordered (scatter) store"
+  },
+  {
+    "mnemonic": "vluxei64.v",
+    "ext": "RVV",
+    "group": "rvv-mem-indexed",
+    "format": "VL-idx-uo",
+    "forms": [
+      "v"
+    ],
+    "sew": [
+      64
+    ],
+    "expected": "supported",
+    "note": "indexed-unordered (gather) load"
+  },
+  {
+    "mnemonic": "vloxei64.v",
+    "ext": "RVV",
+    "group": "rvv-mem-indexed",
+    "format": "VL-idx-o",
+    "forms": [
+      "v"
+    ],
+    "sew": [
+      64
+    ],
+    "expected": "supported",
+    "note": "indexed-ordered (gather) load"
+  },
+  {
+    "mnemonic": "vsuxei64.v",
+    "ext": "RVV",
+    "group": "rvv-mem-indexed",
+    "format": "VS-idx-uo",
+    "forms": [
+      "v"
+    ],
+    "sew": [
+      64
+    ],
+    "expected": "supported",
+    "note": "indexed-unordered (scatter) store"
+  },
+  {
+    "mnemonic": "vsoxei64.v",
+    "ext": "RVV",
+    "group": "rvv-mem-indexed",
+    "format": "VS-idx-o",
+    "forms": [
+      "v"
+    ],
+    "sew": [
+      64
+    ],
+    "expected": "supported",
+    "note": "indexed-ordered (scatter) store"
+  },
+  {
+    "mnemonic": "vl1re8.v",
+    "ext": "RVV",
+    "group": "rvv-mem-whole",
+    "format": "VL-whole",
+    "forms": [
+      "v"
+    ],
+    "sew": [
+      8
+    ],
+    "expected": "supported",
+    "note": "whole-register load, 1 reg(s)"
+  },
+  {
+    "mnemonic": "vl1re64.v",
+    "ext": "RVV",
+    "group": "rvv-mem-whole",
+    "format": "VL-whole",
+    "forms": [
+      "v"
+    ],
+    "sew": [
+      64
+    ],
+    "expected": "supported",
+    "note": "whole-register load EEW64, 1 reg(s)"
+  },
+  {
+    "mnemonic": "vs1r.v",
+    "ext": "RVV",
+    "group": "rvv-mem-whole",
+    "format": "VS-whole",
+    "forms": [
+      "v"
+    ],
+    "sew": [
+      8
+    ],
+    "expected": "supported",
+    "note": "whole-register store, 1 reg(s)"
+  },
+  {
+    "mnemonic": "vl2re8.v",
+    "ext": "RVV",
+    "group": "rvv-mem-whole",
+    "format": "VL-whole",
+    "forms": [
+      "v"
+    ],
+    "sew": [
+      8
+    ],
+    "expected": "supported",
+    "note": "whole-register load, 2 reg(s)"
+  },
+  {
+    "mnemonic": "vl2re64.v",
+    "ext": "RVV",
+    "group": "rvv-mem-whole",
+    "format": "VL-whole",
+    "forms": [
+      "v"
+    ],
+    "sew": [
+      64
+    ],
+    "expected": "supported",
+    "note": "whole-register load EEW64, 2 reg(s)"
+  },
+  {
+    "mnemonic": "vs2r.v",
+    "ext": "RVV",
+    "group": "rvv-mem-whole",
+    "format": "VS-whole",
+    "forms": [
+      "v"
+    ],
+    "sew": [
+      8
+    ],
+    "expected": "supported",
+    "note": "whole-register store, 2 reg(s)"
+  },
+  {
+    "mnemonic": "vl4re8.v",
+    "ext": "RVV",
+    "group": "rvv-mem-whole",
+    "format": "VL-whole",
+    "forms": [
+      "v"
+    ],
+    "sew": [
+      8
+    ],
+    "expected": "supported",
+    "note": "whole-register load, 4 reg(s)"
+  },
+  {
+    "mnemonic": "vl4re64.v",
+    "ext": "RVV",
+    "group": "rvv-mem-whole",
+    "format": "VL-whole",
+    "forms": [
+      "v"
+    ],
+    "sew": [
+      64
+    ],
+    "expected": "supported",
+    "note": "whole-register load EEW64, 4 reg(s)"
+  },
+  {
+    "mnemonic": "vs4r.v",
+    "ext": "RVV",
+    "group": "rvv-mem-whole",
+    "format": "VS-whole",
+    "forms": [
+      "v"
+    ],
+    "sew": [
+      8
+    ],
+    "expected": "supported",
+    "note": "whole-register store, 4 reg(s)"
+  },
+  {
+    "mnemonic": "vl8re8.v",
+    "ext": "RVV",
+    "group": "rvv-mem-whole",
+    "format": "VL-whole",
+    "forms": [
+      "v"
+    ],
+    "sew": [
+      8
+    ],
+    "expected": "supported",
+    "note": "whole-register load, 8 reg(s)"
+  },
+  {
+    "mnemonic": "vl8re64.v",
+    "ext": "RVV",
+    "group": "rvv-mem-whole",
+    "format": "VL-whole",
+    "forms": [
+      "v"
+    ],
+    "sew": [
+      64
+    ],
+    "expected": "supported",
+    "note": "whole-register load EEW64, 8 reg(s)"
+  },
+  {
+    "mnemonic": "vs8r.v",
+    "ext": "RVV",
+    "group": "rvv-mem-whole",
+    "format": "VS-whole",
+    "forms": [
+      "v"
+    ],
+    "sew": [
+      8
+    ],
+    "expected": "supported",
+    "note": "whole-register store, 8 reg(s)"
+  },
+  {
+    "mnemonic": "vlseg2e32.v",
+    "ext": "RVV",
+    "group": "rvv-mem-segment",
+    "format": "VL-seg",
+    "forms": [
+      "v"
+    ],
+    "sew": [
+      32
+    ],
+    "expected": "blocked_silent",
+    "note": "unit-stride segment load: nf not decoded -> silently treated as non-segment"
+  },
+  {
+    "mnemonic": "vsseg2e32.v",
+    "ext": "RVV",
+    "group": "rvv-mem-segment",
+    "format": "VS-seg",
+    "forms": [
+      "v"
+    ],
+    "sew": [
+      32
+    ],
+    "expected": "blocked_silent",
+    "note": "unit-stride segment store: silent mis-decode"
+  },
+  {
+    "mnemonic": "vlsseg2e32.v",
+    "ext": "RVV",
+    "group": "rvv-mem-segment",
+    "format": "VL-seg-strd",
+    "forms": [
+      "v"
+    ],
+    "sew": [
+      32
+    ],
+    "expected": "blocked_silent",
+    "note": "strided segment load: silent mis-decode"
+  },
+  {
+    "mnemonic": "vssseg2e32.v",
+    "ext": "RVV",
+    "group": "rvv-mem-segment",
+    "format": "VS-seg-strd",
+    "forms": [
+      "v"
+    ],
+    "sew": [
+      32
+    ],
+    "expected": "blocked_silent",
+    "note": "strided segment store: silent mis-decode"
+  },
+  {
+    "mnemonic": "vluxseg2ei32.v",
+    "ext": "RVV",
+    "group": "rvv-mem-segment",
+    "format": "VL-seg-idx-uo",
+    "forms": [
+      "v"
+    ],
+    "sew": [
+      32
+    ],
+    "expected": "blocked_silent",
+    "note": "indexed-unordered segment load: silent mis-decode"
+  },
+  {
+    "mnemonic": "vloxseg2ei32.v",
+    "ext": "RVV",
+    "group": "rvv-mem-segment",
+    "format": "VL-seg-idx-o",
+    "forms": [
+      "v"
+    ],
+    "sew": [
+      32
+    ],
+    "expected": "blocked_silent",
+    "note": "indexed-ordered segment load: silent mis-decode"
+  },
+  {
+    "mnemonic": "vsuxseg2ei32.v",
+    "ext": "RVV",
+    "group": "rvv-mem-segment",
+    "format": "VS-seg-idx-uo",
+    "forms": [
+      "v"
+    ],
+    "sew": [
+      32
+    ],
+    "expected": "blocked_silent",
+    "note": "indexed-unordered segment store: silent mis-decode"
+  },
+  {
+    "mnemonic": "vsoxseg2ei32.v",
+    "ext": "RVV",
+    "group": "rvv-mem-segment",
+    "format": "VS-seg-idx-o",
+    "forms": [
+      "v"
+    ],
+    "sew": [
+      32
+    ],
+    "expected": "blocked_silent",
+    "note": "indexed-ordered segment store: silent mis-decode"
+  },
+  {
+    "mnemonic": "vlseg2e32ff.v",
+    "ext": "RVV",
+    "group": "rvv-mem-segment",
+    "format": "VL-seg-ff",
+    "forms": [
+      "v"
+    ],
+    "sew": [
+      32
+    ],
+    "expected": "blocked_illegal",
+    "note": "fault-only-first segment load: ff lumop traps illegal regardless of nf"
+  },
+  {
+    "mnemonic": "vlseg4e32.v",
+    "ext": "RVV",
+    "group": "rvv-mem-segment",
+    "format": "VL-seg",
+    "forms": [
+      "v"
+    ],
+    "sew": [
+      32
+    ],
+    "expected": "blocked_silent",
+    "note": "unit-stride segment load: nf not decoded -> silently treated as non-segment"
+  },
+  {
+    "mnemonic": "vsseg4e32.v",
+    "ext": "RVV",
+    "group": "rvv-mem-segment",
+    "format": "VS-seg",
+    "forms": [
+      "v"
+    ],
+    "sew": [
+      32
+    ],
+    "expected": "blocked_silent",
+    "note": "unit-stride segment store: silent mis-decode"
+  },
+  {
+    "mnemonic": "vlsseg4e32.v",
+    "ext": "RVV",
+    "group": "rvv-mem-segment",
+    "format": "VL-seg-strd",
+    "forms": [
+      "v"
+    ],
+    "sew": [
+      32
+    ],
+    "expected": "blocked_silent",
+    "note": "strided segment load: silent mis-decode"
+  },
+  {
+    "mnemonic": "vssseg4e32.v",
+    "ext": "RVV",
+    "group": "rvv-mem-segment",
+    "format": "VS-seg-strd",
+    "forms": [
+      "v"
+    ],
+    "sew": [
+      32
+    ],
+    "expected": "blocked_silent",
+    "note": "strided segment store: silent mis-decode"
+  },
+  {
+    "mnemonic": "vluxseg4ei32.v",
+    "ext": "RVV",
+    "group": "rvv-mem-segment",
+    "format": "VL-seg-idx-uo",
+    "forms": [
+      "v"
+    ],
+    "sew": [
+      32
+    ],
+    "expected": "blocked_silent",
+    "note": "indexed-unordered segment load: silent mis-decode"
+  },
+  {
+    "mnemonic": "vloxseg4ei32.v",
+    "ext": "RVV",
+    "group": "rvv-mem-segment",
+    "format": "VL-seg-idx-o",
+    "forms": [
+      "v"
+    ],
+    "sew": [
+      32
+    ],
+    "expected": "blocked_silent",
+    "note": "indexed-ordered segment load: silent mis-decode"
+  },
+  {
+    "mnemonic": "vsuxseg4ei32.v",
+    "ext": "RVV",
+    "group": "rvv-mem-segment",
+    "format": "VS-seg-idx-uo",
+    "forms": [
+      "v"
+    ],
+    "sew": [
+      32
+    ],
+    "expected": "blocked_silent",
+    "note": "indexed-unordered segment store: silent mis-decode"
+  },
+  {
+    "mnemonic": "vsoxseg4ei32.v",
+    "ext": "RVV",
+    "group": "rvv-mem-segment",
+    "format": "VS-seg-idx-o",
+    "forms": [
+      "v"
+    ],
+    "sew": [
+      32
+    ],
+    "expected": "blocked_silent",
+    "note": "indexed-ordered segment store: silent mis-decode"
+  },
+  {
+    "mnemonic": "vlseg4e32ff.v",
+    "ext": "RVV",
+    "group": "rvv-mem-segment",
+    "format": "VL-seg-ff",
+    "forms": [
+      "v"
+    ],
+    "sew": [
+      32
+    ],
+    "expected": "blocked_illegal",
+    "note": "fault-only-first segment load: ff lumop traps illegal regardless of nf"
+  },
+  {
+    "mnemonic": "vlseg8e32.v",
+    "ext": "RVV",
+    "group": "rvv-mem-segment",
+    "format": "VL-seg",
+    "forms": [
+      "v"
+    ],
+    "sew": [
+      32
+    ],
+    "expected": "blocked_silent",
+    "note": "unit-stride segment load: nf not decoded -> silently treated as non-segment"
+  },
+  {
+    "mnemonic": "vsseg8e32.v",
+    "ext": "RVV",
+    "group": "rvv-mem-segment",
+    "format": "VS-seg",
+    "forms": [
+      "v"
+    ],
+    "sew": [
+      32
+    ],
+    "expected": "blocked_silent",
+    "note": "unit-stride segment store: silent mis-decode"
+  },
+  {
+    "mnemonic": "vlsseg8e32.v",
+    "ext": "RVV",
+    "group": "rvv-mem-segment",
+    "format": "VL-seg-strd",
+    "forms": [
+      "v"
+    ],
+    "sew": [
+      32
+    ],
+    "expected": "blocked_silent",
+    "note": "strided segment load: silent mis-decode"
+  },
+  {
+    "mnemonic": "vssseg8e32.v",
+    "ext": "RVV",
+    "group": "rvv-mem-segment",
+    "format": "VS-seg-strd",
+    "forms": [
+      "v"
+    ],
+    "sew": [
+      32
+    ],
+    "expected": "blocked_silent",
+    "note": "strided segment store: silent mis-decode"
+  },
+  {
+    "mnemonic": "vluxseg8ei32.v",
+    "ext": "RVV",
+    "group": "rvv-mem-segment",
+    "format": "VL-seg-idx-uo",
+    "forms": [
+      "v"
+    ],
+    "sew": [
+      32
+    ],
+    "expected": "blocked_silent",
+    "note": "indexed-unordered segment load: silent mis-decode"
+  },
+  {
+    "mnemonic": "vloxseg8ei32.v",
+    "ext": "RVV",
+    "group": "rvv-mem-segment",
+    "format": "VL-seg-idx-o",
+    "forms": [
+      "v"
+    ],
+    "sew": [
+      32
+    ],
+    "expected": "blocked_silent",
+    "note": "indexed-ordered segment load: silent mis-decode"
+  },
+  {
+    "mnemonic": "vsuxseg8ei32.v",
+    "ext": "RVV",
+    "group": "rvv-mem-segment",
+    "format": "VS-seg-idx-uo",
+    "forms": [
+      "v"
+    ],
+    "sew": [
+      32
+    ],
+    "expected": "blocked_silent",
+    "note": "indexed-unordered segment store: silent mis-decode"
+  },
+  {
+    "mnemonic": "vsoxseg8ei32.v",
+    "ext": "RVV",
+    "group": "rvv-mem-segment",
+    "format": "VS-seg-idx-o",
+    "forms": [
+      "v"
+    ],
+    "sew": [
+      32
+    ],
+    "expected": "blocked_silent",
+    "note": "indexed-ordered segment store: silent mis-decode"
+  },
+  {
+    "mnemonic": "vlseg8e32ff.v",
+    "ext": "RVV",
+    "group": "rvv-mem-segment",
+    "format": "VL-seg-ff",
+    "forms": [
+      "v"
+    ],
+    "sew": [
+      32
+    ],
+    "expected": "blocked_illegal",
+    "note": "fault-only-first segment load: ff lumop traps illegal regardless of nf"
+  },
+  {
+    "mnemonic": "vadd",
+    "ext": "RVV",
+    "group": "rvv-int-arith",
+    "format": "OPIVV/VX/VI",
+    "forms": [
+      "vv",
+      "vx",
+      "vi"
+    ],
+    "sew": [
+      8,
+      16,
+      32,
+      64
+    ],
+    "expected": "supported",
+    "note": ""
+  },
+  {
+    "mnemonic": "vsub",
+    "ext": "RVV",
+    "group": "rvv-int-arith",
+    "format": "OPIVV/VX",
+    "forms": [
+      "vv",
+      "vx"
+    ],
+    "sew": [
+      8,
+      16,
+      32,
+      64
+    ],
+    "expected": "supported",
+    "note": ""
+  },
+  {
+    "mnemonic": "vrsub",
+    "ext": "RVV",
+    "group": "rvv-int-arith",
+    "format": "OPIVX/VI",
+    "forms": [
+      "vx",
+      "vi"
+    ],
+    "sew": [
+      8,
+      16,
+      32,
+      64
+    ],
+    "expected": "supported",
+    "note": "reverse subtract"
+  },
+  {
+    "mnemonic": "vand",
+    "ext": "RVV",
+    "group": "rvv-int-logical",
+    "format": "OPIVV/VX/VI",
+    "forms": [
+      "vv",
+      "vx",
+      "vi"
+    ],
+    "sew": [
+      8,
+      16,
+      32,
+      64
+    ],
+    "expected": "supported",
+    "note": ""
+  },
+  {
+    "mnemonic": "vor",
+    "ext": "RVV",
+    "group": "rvv-int-logical",
+    "format": "OPIVV/VX/VI",
+    "forms": [
+      "vv",
+      "vx",
+      "vi"
+    ],
+    "sew": [
+      8,
+      16,
+      32,
+      64
+    ],
+    "expected": "supported",
+    "note": ""
+  },
+  {
+    "mnemonic": "vxor",
+    "ext": "RVV",
+    "group": "rvv-int-logical",
+    "format": "OPIVV/VX/VI",
+    "forms": [
+      "vv",
+      "vx",
+      "vi"
+    ],
+    "sew": [
+      8,
+      16,
+      32,
+      64
+    ],
+    "expected": "supported",
+    "note": ""
+  },
+  {
+    "mnemonic": "vsll",
+    "ext": "RVV",
+    "group": "rvv-int-shift",
+    "format": "OPIVV/VX/VI",
+    "forms": [
+      "vv",
+      "vx",
+      "vi"
+    ],
+    "sew": [
+      8,
+      16,
+      32,
+      64
+    ],
+    "expected": "supported",
+    "note": ""
+  },
+  {
+    "mnemonic": "vsrl",
+    "ext": "RVV",
+    "group": "rvv-int-shift",
+    "format": "OPIVV/VX/VI",
+    "forms": [
+      "vv",
+      "vx",
+      "vi"
+    ],
+    "sew": [
+      8,
+      16,
+      32,
+      64
+    ],
+    "expected": "supported",
+    "note": ""
+  },
+  {
+    "mnemonic": "vsra",
+    "ext": "RVV",
+    "group": "rvv-int-shift",
+    "format": "OPIVV/VX/VI",
+    "forms": [
+      "vv",
+      "vx",
+      "vi"
+    ],
+    "sew": [
+      8,
+      16,
+      32,
+      64
+    ],
+    "expected": "supported",
+    "note": ""
+  },
+  {
+    "mnemonic": "vnsrl",
+    "ext": "RVV",
+    "group": "rvv-int-narrow",
+    "format": "OPIVV/VX/VI",
+    "forms": [
+      "wv",
+      "wx",
+      "wi"
+    ],
+    "sew": [
+      16,
+      32,
+      64
+    ],
+    "expected": "supported",
+    "note": "narrowing logical shift right"
+  },
+  {
+    "mnemonic": "vnsra",
+    "ext": "RVV",
+    "group": "rvv-int-narrow",
+    "format": "OPIVV/VX/VI",
+    "forms": [
+      "wv",
+      "wx",
+      "wi"
+    ],
+    "sew": [
+      16,
+      32,
+      64
+    ],
+    "expected": "supported",
+    "note": "narrowing arithmetic shift right"
+  },
+  {
+    "mnemonic": "vminu",
+    "ext": "RVV",
+    "group": "rvv-int-minmax",
+    "format": "OPIVV/VX",
+    "forms": [
+      "vv",
+      "vx"
+    ],
+    "sew": [
+      8,
+      16,
+      32,
+      64
+    ],
+    "expected": "supported",
+    "note": ""
+  },
+  {
+    "mnemonic": "vmin",
+    "ext": "RVV",
+    "group": "rvv-int-minmax",
+    "format": "OPIVV/VX",
+    "forms": [
+      "vv",
+      "vx"
+    ],
+    "sew": [
+      8,
+      16,
+      32,
+      64
+    ],
+    "expected": "supported",
+    "note": ""
+  },
+  {
+    "mnemonic": "vmaxu",
+    "ext": "RVV",
+    "group": "rvv-int-minmax",
+    "format": "OPIVV/VX",
+    "forms": [
+      "vv",
+      "vx"
+    ],
+    "sew": [
+      8,
+      16,
+      32,
+      64
+    ],
+    "expected": "supported",
+    "note": ""
+  },
+  {
+    "mnemonic": "vmax",
+    "ext": "RVV",
+    "group": "rvv-int-minmax",
+    "format": "OPIVV/VX",
+    "forms": [
+      "vv",
+      "vx"
+    ],
+    "sew": [
+      8,
+      16,
+      32,
+      64
+    ],
+    "expected": "supported",
+    "note": ""
+  },
+  {
+    "mnemonic": "vmseq",
+    "ext": "RVV",
+    "group": "rvv-int-cmp",
+    "format": "OPIVV/VX/VI",
+    "forms": [
+      "vv",
+      "vx",
+      "vi"
+    ],
+    "sew": [
+      8,
+      16,
+      32,
+      64
+    ],
+    "expected": "supported",
+    "note": ""
+  },
+  {
+    "mnemonic": "vmsne",
+    "ext": "RVV",
+    "group": "rvv-int-cmp",
+    "format": "OPIVV/VX/VI",
+    "forms": [
+      "vv",
+      "vx",
+      "vi"
+    ],
+    "sew": [
+      8,
+      16,
+      32,
+      64
+    ],
+    "expected": "supported",
+    "note": ""
+  },
+  {
+    "mnemonic": "vmsltu",
+    "ext": "RVV",
+    "group": "rvv-int-cmp",
+    "format": "OPIVV/VX",
+    "forms": [
+      "vv",
+      "vx"
+    ],
+    "sew": [
+      8,
+      16,
+      32,
+      64
+    ],
+    "expected": "supported",
+    "note": ""
+  },
+  {
+    "mnemonic": "vmslt",
+    "ext": "RVV",
+    "group": "rvv-int-cmp",
+    "format": "OPIVV/VX",
+    "forms": [
+      "vv",
+      "vx"
+    ],
+    "sew": [
+      8,
+      16,
+      32,
+      64
+    ],
+    "expected": "supported",
+    "note": ""
+  },
+  {
+    "mnemonic": "vmsleu",
+    "ext": "RVV",
+    "group": "rvv-int-cmp",
+    "format": "OPIVV/VX/VI",
+    "forms": [
+      "vv",
+      "vx",
+      "vi"
+    ],
+    "sew": [
+      8,
+      16,
+      32,
+      64
+    ],
+    "expected": "supported",
+    "note": ""
+  },
+  {
+    "mnemonic": "vmsle",
+    "ext": "RVV",
+    "group": "rvv-int-cmp",
+    "format": "OPIVV/VX/VI",
+    "forms": [
+      "vv",
+      "vx",
+      "vi"
+    ],
+    "sew": [
+      8,
+      16,
+      32,
+      64
+    ],
+    "expected": "supported",
+    "note": ""
+  },
+  {
+    "mnemonic": "vmsgtu",
+    "ext": "RVV",
+    "group": "rvv-int-cmp",
+    "format": "OPIVX/VI",
+    "forms": [
+      "vx",
+      "vi"
+    ],
+    "sew": [
+      8,
+      16,
+      32,
+      64
+    ],
+    "expected": "supported",
+    "note": ""
+  },
+  {
+    "mnemonic": "vmsgt",
+    "ext": "RVV",
+    "group": "rvv-int-cmp",
+    "format": "OPIVX/VI",
+    "forms": [
+      "vx",
+      "vi"
+    ],
+    "sew": [
+      8,
+      16,
+      32,
+      64
+    ],
+    "expected": "supported",
+    "note": ""
+  },
+  {
+    "mnemonic": "vmerge",
+    "ext": "RVV",
+    "group": "rvv-int-merge",
+    "format": "OPIVV/VX/VI",
+    "forms": [
+      "vvm",
+      "vxm",
+      "vim"
+    ],
+    "sew": [
+      8,
+      16,
+      32,
+      64
+    ],
+    "expected": "supported",
+    "note": "mask-driven merge"
+  },
+  {
+    "mnemonic": "vmv.v",
+    "ext": "RVV",
+    "group": "rvv-int-merge",
+    "format": "OPIVV/VX/VI",
+    "forms": [
+      "v",
+      "x",
+      "i"
+    ],
+    "sew": [
+      8,
+      16,
+      32,
+      64
+    ],
+    "expected": "supported",
+    "note": "vmv.v.v/.v.x/.v.i splat/copy"
+  },
+  {
+    "mnemonic": "vadc",
+    "ext": "RVV",
+    "group": "rvv-int-carry",
+    "format": "OPIVV/VX/VI",
+    "forms": [
+      "vvm",
+      "vxm",
+      "vim"
+    ],
+    "sew": [
+      8,
+      16,
+      32,
+      64
+    ],
+    "expected": "supported",
+    "note": "add-with-carry"
+  },
+  {
+    "mnemonic": "vsbc",
+    "ext": "RVV",
+    "group": "rvv-int-carry",
+    "format": "OPIVV/VX",
+    "forms": [
+      "vvm",
+      "vxm"
+    ],
+    "sew": [
+      8,
+      16,
+      32,
+      64
+    ],
+    "expected": "supported",
+    "note": "subtract-with-borrow"
+  },
+  {
+    "mnemonic": "vmadc",
+    "ext": "RVV",
+    "group": "rvv-int-carry",
+    "format": "OPIVV/VX/VI",
+    "forms": [
+      "vvm",
+      "vxm",
+      "vim",
+      "vv",
+      "vx",
+      "vi"
+    ],
+    "sew": [
+      8,
+      16,
+      32,
+      64
+    ],
+    "expected": "supported",
+    "note": "produce carry-out mask"
+  },
+  {
+    "mnemonic": "vmsbc",
+    "ext": "RVV",
+    "group": "rvv-int-carry",
+    "format": "OPIVV/VX",
+    "forms": [
+      "vvm",
+      "vxm",
+      "vv",
+      "vx"
+    ],
+    "sew": [
+      8,
+      16,
+      32,
+      64
+    ],
+    "expected": "supported",
+    "note": "produce borrow-out mask"
+  },
+  {
+    "mnemonic": "vzext",
+    "ext": "RVV",
+    "group": "rvv-int-ext",
+    "format": "OPMVV-VXUNARY0",
+    "forms": [
+      "vf2",
+      "vf4",
+      "vf8"
+    ],
+    "sew": [
+      16,
+      32,
+      64
+    ],
+    "expected": "supported",
+    "note": "zero-extend vf2/vf4/vf8"
+  },
+  {
+    "mnemonic": "vsext",
+    "ext": "RVV",
+    "group": "rvv-int-ext",
+    "format": "OPMVV-VXUNARY0",
+    "forms": [
+      "vf2",
+      "vf4",
+      "vf8"
+    ],
+    "sew": [
+      16,
+      32,
+      64
+    ],
+    "expected": "supported",
+    "note": "sign-extend vf2/vf4/vf8"
+  },
+  {
+    "mnemonic": "vmul",
+    "ext": "RVV",
+    "group": "rvv-int-mul",
+    "format": "OPMVV/VX",
+    "forms": [
+      "vv",
+      "vx"
+    ],
+    "sew": [
+      8,
+      16,
+      32,
+      64
+    ],
+    "expected": "supported",
+    "note": ""
+  },
+  {
+    "mnemonic": "vmulh",
+    "ext": "RVV",
+    "group": "rvv-int-mul",
+    "format": "OPMVV/VX",
+    "forms": [
+      "vv",
+      "vx"
+    ],
+    "sew": [
+      8,
+      16,
+      32,
+      64
+    ],
+    "expected": "supported",
+    "note": "high bits, signed"
+  },
+  {
+    "mnemonic": "vmulhu",
+    "ext": "RVV",
+    "group": "rvv-int-mul",
+    "format": "OPMVV/VX",
+    "forms": [
+      "vv",
+      "vx"
+    ],
+    "sew": [
+      8,
+      16,
+      32,
+      64
+    ],
+    "expected": "supported",
+    "note": "high bits, unsigned"
+  },
+  {
+    "mnemonic": "vmulhsu",
+    "ext": "RVV",
+    "group": "rvv-int-mul",
+    "format": "OPMVV/VX",
+    "forms": [
+      "vv",
+      "vx"
+    ],
+    "sew": [
+      8,
+      16,
+      32,
+      64
+    ],
+    "expected": "supported",
+    "note": "high bits, signed*unsigned"
+  },
+  {
+    "mnemonic": "vdivu",
+    "ext": "RVV",
+    "group": "rvv-int-div",
+    "format": "OPMVV/VX",
+    "forms": [
+      "vv",
+      "vx"
+    ],
+    "sew": [
+      8,
+      16,
+      32,
+      64
+    ],
+    "expected": "supported",
+    "note": ""
+  },
+  {
+    "mnemonic": "vdiv",
+    "ext": "RVV",
+    "group": "rvv-int-div",
+    "format": "OPMVV/VX",
+    "forms": [
+      "vv",
+      "vx"
+    ],
+    "sew": [
+      8,
+      16,
+      32,
+      64
+    ],
+    "expected": "supported",
+    "note": ""
+  },
+  {
+    "mnemonic": "vremu",
+    "ext": "RVV",
+    "group": "rvv-int-div",
+    "format": "OPMVV/VX",
+    "forms": [
+      "vv",
+      "vx"
+    ],
+    "sew": [
+      8,
+      16,
+      32,
+      64
+    ],
+    "expected": "supported",
+    "note": ""
+  },
+  {
+    "mnemonic": "vrem",
+    "ext": "RVV",
+    "group": "rvv-int-div",
+    "format": "OPMVV/VX",
+    "forms": [
+      "vv",
+      "vx"
+    ],
+    "sew": [
+      8,
+      16,
+      32,
+      64
+    ],
+    "expected": "supported",
+    "note": ""
+  },
+  {
+    "mnemonic": "vmacc",
+    "ext": "RVV",
+    "group": "rvv-int-muladd",
+    "format": "OPMVV/VX",
+    "forms": [
+      "vv",
+      "vx"
+    ],
+    "sew": [
+      8,
+      16,
+      32,
+      64
+    ],
+    "expected": "supported",
+    "note": ""
+  },
+  {
+    "mnemonic": "vnmsac",
+    "ext": "RVV",
+    "group": "rvv-int-muladd",
+    "format": "OPMVV/VX",
+    "forms": [
+      "vv",
+      "vx"
+    ],
+    "sew": [
+      8,
+      16,
+      32,
+      64
+    ],
+    "expected": "supported",
+    "note": ""
+  },
+  {
+    "mnemonic": "vmadd",
+    "ext": "RVV",
+    "group": "rvv-int-muladd",
+    "format": "OPMVV/VX",
+    "forms": [
+      "vv",
+      "vx"
+    ],
+    "sew": [
+      8,
+      16,
+      32,
+      64
+    ],
+    "expected": "supported",
+    "note": ""
+  },
+  {
+    "mnemonic": "vnmsub",
+    "ext": "RVV",
+    "group": "rvv-int-muladd",
+    "format": "OPMVV/VX",
+    "forms": [
+      "vv",
+      "vx"
+    ],
+    "sew": [
+      8,
+      16,
+      32,
+      64
+    ],
+    "expected": "supported",
+    "note": ""
+  },
+  {
+    "mnemonic": "vwmul",
+    "ext": "RVV",
+    "group": "rvv-int-widen",
+    "format": "OPMVV/VX",
+    "forms": [
+      "vv",
+      "vx"
+    ],
+    "sew": [
+      8,
+      16,
+      32
+    ],
+    "expected": "supported",
+    "note": ""
+  },
+  {
+    "mnemonic": "vwmulu",
+    "ext": "RVV",
+    "group": "rvv-int-widen",
+    "format": "OPMVV/VX",
+    "forms": [
+      "vv",
+      "vx"
+    ],
+    "sew": [
+      8,
+      16,
+      32
+    ],
+    "expected": "supported",
+    "note": ""
+  },
+  {
+    "mnemonic": "vwmulsu",
+    "ext": "RVV",
+    "group": "rvv-int-widen",
+    "format": "OPMVV/VX",
+    "forms": [
+      "vv",
+      "vx"
+    ],
+    "sew": [
+      8,
+      16,
+      32
+    ],
+    "expected": "supported",
+    "note": ""
+  },
+  {
+    "mnemonic": "vwmacc",
+    "ext": "RVV",
+    "group": "rvv-int-widen",
+    "format": "OPMVV/VX",
+    "forms": [
+      "vv",
+      "vx"
+    ],
+    "sew": [
+      8,
+      16,
+      32
+    ],
+    "expected": "supported",
+    "note": ""
+  },
+  {
+    "mnemonic": "vwmaccu",
+    "ext": "RVV",
+    "group": "rvv-int-widen",
+    "format": "OPMVV/VX",
+    "forms": [
+      "vv",
+      "vx"
+    ],
+    "sew": [
+      8,
+      16,
+      32
+    ],
+    "expected": "supported",
+    "note": ""
+  },
+  {
+    "mnemonic": "vwmaccsu",
+    "ext": "RVV",
+    "group": "rvv-int-widen",
+    "format": "OPMVV/VX",
+    "forms": [
+      "vv",
+      "vx"
+    ],
+    "sew": [
+      8,
+      16,
+      32
+    ],
+    "expected": "supported",
+    "note": ""
+  },
+  {
+    "mnemonic": "vwmaccus",
+    "ext": "RVV",
+    "group": "rvv-int-widen",
+    "format": "OPMVX",
+    "forms": [
+      "vx"
+    ],
+    "sew": [
+      8,
+      16,
+      32
+    ],
+    "expected": "supported",
+    "note": ""
+  },
+  {
+    "mnemonic": "vwaddu",
+    "ext": "RVV",
+    "group": "rvv-int-widen",
+    "format": "OPMVV/VX",
+    "forms": [
+      "vv",
+      "vx",
+      "wv",
+      "wx"
+    ],
+    "sew": [
+      8,
+      16,
+      32
+    ],
+    "expected": "supported",
+    "note": ""
+  },
+  {
+    "mnemonic": "vwadd",
+    "ext": "RVV",
+    "group": "rvv-int-widen",
+    "format": "OPMVV/VX",
+    "forms": [
+      "vv",
+      "vx",
+      "wv",
+      "wx"
+    ],
+    "sew": [
+      8,
+      16,
+      32
+    ],
+    "expected": "supported",
+    "note": ""
+  },
+  {
+    "mnemonic": "vwsubu",
+    "ext": "RVV",
+    "group": "rvv-int-widen",
+    "format": "OPMVV/VX",
+    "forms": [
+      "vv",
+      "vx",
+      "wv",
+      "wx"
+    ],
+    "sew": [
+      8,
+      16,
+      32
+    ],
+    "expected": "supported",
+    "note": ""
+  },
+  {
+    "mnemonic": "vwsub",
+    "ext": "RVV",
+    "group": "rvv-int-widen",
+    "format": "OPMVV/VX",
+    "forms": [
+      "vv",
+      "vx",
+      "wv",
+      "wx"
+    ],
+    "sew": [
+      8,
+      16,
+      32
+    ],
+    "expected": "supported",
+    "note": ""
+  },
+  {
+    "mnemonic": "vsaddu",
+    "ext": "RVV",
+    "group": "rvv-fixed",
+    "format": "OPIVV/VX/VI",
+    "forms": [
+      "vv",
+      "vx",
+      "vi"
+    ],
+    "sew": [
+      8,
+      16,
+      32,
+      64
+    ],
+    "expected": "supported",
+    "note": "saturating add unsigned"
+  },
+  {
+    "mnemonic": "vsadd",
+    "ext": "RVV",
+    "group": "rvv-fixed",
+    "format": "OPIVV/VX/VI",
+    "forms": [
+      "vv",
+      "vx",
+      "vi"
+    ],
+    "sew": [
+      8,
+      16,
+      32,
+      64
+    ],
+    "expected": "supported",
+    "note": "saturating add signed"
+  },
+  {
+    "mnemonic": "vssubu",
+    "ext": "RVV",
+    "group": "rvv-fixed",
+    "format": "OPIVV/VX",
+    "forms": [
+      "vv",
+      "vx"
+    ],
+    "sew": [
+      8,
+      16,
+      32,
+      64
+    ],
+    "expected": "supported",
+    "note": ""
+  },
+  {
+    "mnemonic": "vssub",
+    "ext": "RVV",
+    "group": "rvv-fixed",
+    "format": "OPIVV/VX",
+    "forms": [
+      "vv",
+      "vx"
+    ],
+    "sew": [
+      8,
+      16,
+      32,
+      64
+    ],
+    "expected": "supported",
+    "note": ""
+  },
+  {
+    "mnemonic": "vaaddu",
+    "ext": "RVV",
+    "group": "rvv-fixed",
+    "format": "OPMVV/VX",
+    "forms": [
+      "vv",
+      "vx"
+    ],
+    "sew": [
+      8,
+      16,
+      32,
+      64
+    ],
+    "expected": "supported",
+    "note": "averaging add unsigned (rounding via vxrm)"
+  },
+  {
+    "mnemonic": "vaadd",
+    "ext": "RVV",
+    "group": "rvv-fixed",
+    "format": "OPMVV/VX",
+    "forms": [
+      "vv",
+      "vx"
+    ],
+    "sew": [
+      8,
+      16,
+      32,
+      64
+    ],
+    "expected": "supported",
+    "note": ""
+  },
+  {
+    "mnemonic": "vasubu",
+    "ext": "RVV",
+    "group": "rvv-fixed",
+    "format": "OPMVV/VX",
+    "forms": [
+      "vv",
+      "vx"
+    ],
+    "sew": [
+      8,
+      16,
+      32,
+      64
+    ],
+    "expected": "supported",
+    "note": ""
+  },
+  {
+    "mnemonic": "vasub",
+    "ext": "RVV",
+    "group": "rvv-fixed",
+    "format": "OPMVV/VX",
+    "forms": [
+      "vv",
+      "vx"
+    ],
+    "sew": [
+      8,
+      16,
+      32,
+      64
+    ],
+    "expected": "supported",
+    "note": ""
+  },
+  {
+    "mnemonic": "vsmul",
+    "ext": "RVV",
+    "group": "rvv-fixed",
+    "format": "OPIVV/VX",
+    "forms": [
+      "vv",
+      "vx"
+    ],
+    "sew": [
+      8,
+      16,
+      32,
+      64
+    ],
+    "expected": "supported",
+    "note": "fractional mul with rounding+saturate"
+  },
+  {
+    "mnemonic": "vssrl",
+    "ext": "RVV",
+    "group": "rvv-fixed",
+    "format": "OPIVV/VX/VI",
+    "forms": [
+      "vv",
+      "vx",
+      "vi"
+    ],
+    "sew": [
+      8,
+      16,
+      32,
+      64
+    ],
+    "expected": "supported",
+    "note": "scaling shift right logical (rounding)"
+  },
+  {
+    "mnemonic": "vssra",
+    "ext": "RVV",
+    "group": "rvv-fixed",
+    "format": "OPIVV/VX/VI",
+    "forms": [
+      "vv",
+      "vx",
+      "vi"
+    ],
+    "sew": [
+      8,
+      16,
+      32,
+      64
+    ],
+    "expected": "supported",
+    "note": "scaling shift right arithmetic"
+  },
+  {
+    "mnemonic": "vnclipu",
+    "ext": "RVV",
+    "group": "rvv-fixed",
+    "format": "OPIVV/VX/VI",
+    "forms": [
+      "wv",
+      "wx",
+      "wi"
+    ],
+    "sew": [
+      16,
+      32,
+      64
+    ],
+    "expected": "supported",
+    "note": "narrowing clip unsigned"
+  },
+  {
+    "mnemonic": "vnclip",
+    "ext": "RVV",
+    "group": "rvv-fixed",
+    "format": "OPIVV/VX/VI",
+    "forms": [
+      "wv",
+      "wx",
+      "wi"
+    ],
+    "sew": [
+      16,
+      32,
+      64
+    ],
+    "expected": "supported",
+    "note": "narrowing clip signed"
+  },
+  {
+    "mnemonic": "vfadd",
+    "ext": "RVV",
+    "group": "rvv-fp-arith",
+    "format": "OPFVV/VF",
+    "forms": [
+      "vv",
+      "vf"
+    ],
+    "sew": [
+      16,
+      32,
+      64
+    ],
+    "expected": "supported",
+    "note": ""
+  },
+  {
+    "mnemonic": "vfsub",
+    "ext": "RVV",
+    "group": "rvv-fp-arith",
+    "format": "OPFVV/VF",
+    "forms": [
+      "vv",
+      "vf"
+    ],
+    "sew": [
+      16,
+      32,
+      64
+    ],
+    "expected": "supported",
+    "note": ""
+  },
+  {
+    "mnemonic": "vfrsub",
+    "ext": "RVV",
+    "group": "rvv-fp-arith",
+    "format": "OPFVF",
+    "forms": [
+      "vf"
+    ],
+    "sew": [
+      16,
+      32,
+      64
+    ],
+    "expected": "supported",
+    "note": ""
+  },
+  {
+    "mnemonic": "vfmul",
+    "ext": "RVV",
+    "group": "rvv-fp-arith",
+    "format": "OPFVV/VF",
+    "forms": [
+      "vv",
+      "vf"
+    ],
+    "sew": [
+      16,
+      32,
+      64
+    ],
+    "expected": "supported",
+    "note": ""
+  },
+  {
+    "mnemonic": "vfdiv",
+    "ext": "RVV",
+    "group": "rvv-fp-arith",
+    "format": "OPFVV/VF",
+    "forms": [
+      "vv",
+      "vf"
+    ],
+    "sew": [
+      16,
+      32,
+      64
+    ],
+    "expected": "supported",
+    "note": ""
+  },
+  {
+    "mnemonic": "vfrdiv",
+    "ext": "RVV",
+    "group": "rvv-fp-arith",
+    "format": "OPFVF",
+    "forms": [
+      "vf"
+    ],
+    "sew": [
+      16,
+      32,
+      64
+    ],
+    "expected": "supported",
+    "note": ""
+  },
+  {
+    "mnemonic": "vfmacc",
+    "ext": "RVV",
+    "group": "rvv-fp-muladd",
+    "format": "OPFVV/VF",
+    "forms": [
+      "vv",
+      "vf"
+    ],
+    "sew": [
+      16,
+      32,
+      64
+    ],
+    "expected": "supported",
+    "note": "FMA: oracle must be Spike (fusion)"
+  },
+  {
+    "mnemonic": "vfnmacc",
+    "ext": "RVV",
+    "group": "rvv-fp-muladd",
+    "format": "OPFVV/VF",
+    "forms": [
+      "vv",
+      "vf"
+    ],
+    "sew": [
+      16,
+      32,
+      64
+    ],
+    "expected": "supported",
+    "note": ""
+  },
+  {
+    "mnemonic": "vfmsac",
+    "ext": "RVV",
+    "group": "rvv-fp-muladd",
+    "format": "OPFVV/VF",
+    "forms": [
+      "vv",
+      "vf"
+    ],
+    "sew": [
+      16,
+      32,
+      64
+    ],
+    "expected": "supported",
+    "note": ""
+  },
+  {
+    "mnemonic": "vfnmsac",
+    "ext": "RVV",
+    "group": "rvv-fp-muladd",
+    "format": "OPFVV/VF",
+    "forms": [
+      "vv",
+      "vf"
+    ],
+    "sew": [
+      16,
+      32,
+      64
+    ],
+    "expected": "supported",
+    "note": ""
+  },
+  {
+    "mnemonic": "vfmadd",
+    "ext": "RVV",
+    "group": "rvv-fp-muladd",
+    "format": "OPFVV/VF",
+    "forms": [
+      "vv",
+      "vf"
+    ],
+    "sew": [
+      16,
+      32,
+      64
+    ],
+    "expected": "supported",
+    "note": ""
+  },
+  {
+    "mnemonic": "vfnmadd",
+    "ext": "RVV",
+    "group": "rvv-fp-muladd",
+    "format": "OPFVV/VF",
+    "forms": [
+      "vv",
+      "vf"
+    ],
+    "sew": [
+      16,
+      32,
+      64
+    ],
+    "expected": "supported",
+    "note": ""
+  },
+  {
+    "mnemonic": "vfmsub",
+    "ext": "RVV",
+    "group": "rvv-fp-muladd",
+    "format": "OPFVV/VF",
+    "forms": [
+      "vv",
+      "vf"
+    ],
+    "sew": [
+      16,
+      32,
+      64
+    ],
+    "expected": "supported",
+    "note": ""
+  },
+  {
+    "mnemonic": "vfnmsub",
+    "ext": "RVV",
+    "group": "rvv-fp-muladd",
+    "format": "OPFVV/VF",
+    "forms": [
+      "vv",
+      "vf"
+    ],
+    "sew": [
+      16,
+      32,
+      64
+    ],
+    "expected": "supported",
+    "note": ""
+  },
+  {
+    "mnemonic": "vfsqrt",
+    "ext": "RVV",
+    "group": "rvv-fp-unary",
+    "format": "OPFVV-VFUNARY1",
+    "forms": [
+      "v"
+    ],
+    "sew": [
+      16,
+      32,
+      64
+    ],
+    "expected": "supported",
+    "note": ""
+  },
+  {
+    "mnemonic": "vfrsqrt7",
+    "ext": "RVV",
+    "group": "rvv-fp-unary",
+    "format": "OPFVV-VFUNARY1",
+    "forms": [
+      "v"
+    ],
+    "sew": [
+      16,
+      32,
+      64
+    ],
+    "expected": "supported",
+    "note": "7-bit approx; oracle MUST be Spike"
+  },
+  {
+    "mnemonic": "vfrec7",
+    "ext": "RVV",
+    "group": "rvv-fp-unary",
+    "format": "OPFVV-VFUNARY1",
+    "forms": [
+      "v"
+    ],
+    "sew": [
+      16,
+      32,
+      64
+    ],
+    "expected": "supported",
+    "note": "7-bit approx; oracle MUST be Spike"
+  },
+  {
+    "mnemonic": "vfmin",
+    "ext": "RVV",
+    "group": "rvv-fp-minmax",
+    "format": "OPFVV/VF",
+    "forms": [
+      "vv",
+      "vf"
+    ],
+    "sew": [
+      16,
+      32,
+      64
+    ],
+    "expected": "supported",
+    "note": ""
+  },
+  {
+    "mnemonic": "vfmax",
+    "ext": "RVV",
+    "group": "rvv-fp-minmax",
+    "format": "OPFVV/VF",
+    "forms": [
+      "vv",
+      "vf"
+    ],
+    "sew": [
+      16,
+      32,
+      64
+    ],
+    "expected": "supported",
+    "note": ""
+  },
+  {
+    "mnemonic": "vfsgnj",
+    "ext": "RVV",
+    "group": "rvv-fp-sgnj",
+    "format": "OPFVV/VF",
+    "forms": [
+      "vv",
+      "vf"
+    ],
+    "sew": [
+      16,
+      32,
+      64
+    ],
+    "expected": "supported",
+    "note": ""
+  },
+  {
+    "mnemonic": "vfsgnjn",
+    "ext": "RVV",
+    "group": "rvv-fp-sgnj",
+    "format": "OPFVV/VF",
+    "forms": [
+      "vv",
+      "vf"
+    ],
+    "sew": [
+      16,
+      32,
+      64
+    ],
+    "expected": "supported",
+    "note": ""
+  },
+  {
+    "mnemonic": "vfsgnjx",
+    "ext": "RVV",
+    "group": "rvv-fp-sgnj",
+    "format": "OPFVV/VF",
+    "forms": [
+      "vv",
+      "vf"
+    ],
+    "sew": [
+      16,
+      32,
+      64
+    ],
+    "expected": "supported",
+    "note": ""
+  },
+  {
+    "mnemonic": "vfclass",
+    "ext": "RVV",
+    "group": "rvv-fp-unary",
+    "format": "OPFVV-VFUNARY1",
+    "forms": [
+      "v"
+    ],
+    "sew": [
+      16,
+      32,
+      64
+    ],
+    "expected": "supported",
+    "note": ""
+  },
+  {
+    "mnemonic": "vmfeq",
+    "ext": "RVV",
+    "group": "rvv-fp-cmp",
+    "format": "OPFVV/VF",
+    "forms": [
+      "vv",
+      "vf"
+    ],
+    "sew": [
+      16,
+      32,
+      64
+    ],
+    "expected": "supported",
+    "note": ""
+  },
+  {
+    "mnemonic": "vmfne",
+    "ext": "RVV",
+    "group": "rvv-fp-cmp",
+    "format": "OPFVV/VF",
+    "forms": [
+      "vv",
+      "vf"
+    ],
+    "sew": [
+      16,
+      32,
+      64
+    ],
+    "expected": "supported",
+    "note": ""
+  },
+  {
+    "mnemonic": "vmflt",
+    "ext": "RVV",
+    "group": "rvv-fp-cmp",
+    "format": "OPFVV/VF",
+    "forms": [
+      "vv",
+      "vf"
+    ],
+    "sew": [
+      16,
+      32,
+      64
+    ],
+    "expected": "supported",
+    "note": ""
+  },
+  {
+    "mnemonic": "vmfle",
+    "ext": "RVV",
+    "group": "rvv-fp-cmp",
+    "format": "OPFVV/VF",
+    "forms": [
+      "vv",
+      "vf"
+    ],
+    "sew": [
+      16,
+      32,
+      64
+    ],
+    "expected": "supported",
+    "note": ""
+  },
+  {
+    "mnemonic": "vmfgt",
+    "ext": "RVV",
+    "group": "rvv-fp-cmp",
+    "format": "OPFVF",
+    "forms": [
+      "vf"
+    ],
+    "sew": [
+      16,
+      32,
+      64
+    ],
+    "expected": "supported",
+    "note": ""
+  },
+  {
+    "mnemonic": "vmfge",
+    "ext": "RVV",
+    "group": "rvv-fp-cmp",
+    "format": "OPFVF",
+    "forms": [
+      "vf"
+    ],
+    "sew": [
+      16,
+      32,
+      64
+    ],
+    "expected": "supported",
+    "note": ""
+  },
+  {
+    "mnemonic": "vfmerge",
+    "ext": "RVV",
+    "group": "rvv-fp-merge",
+    "format": "OPFVF",
+    "forms": [
+      "vfm"
+    ],
+    "sew": [
+      16,
+      32,
+      64
+    ],
+    "expected": "supported",
+    "note": ""
+  },
+  {
+    "mnemonic": "vfmv.v.f",
+    "ext": "RVV",
+    "group": "rvv-fp-merge",
+    "format": "OPFVF",
+    "forms": [
+      "f"
+    ],
+    "sew": [
+      16,
+      32,
+      64
+    ],
+    "expected": "supported",
+    "note": "FP splat"
+  },
+  {
+    "mnemonic": "vfcvt",
+    "ext": "RVV",
+    "group": "rvv-fp-cvt",
+    "format": "OPFVV-VFUNARY0",
+    "forms": [
+      "xu.f.v",
+      "x.f.v",
+      "rtz.xu.f.v",
+      "rtz.x.f.v",
+      "f.xu.v",
+      "f.x.v"
+    ],
+    "sew": [
+      16,
+      32,
+      64
+    ],
+    "expected": "supported",
+    "note": "same-width int<->fp convert"
+  },
+  {
+    "mnemonic": "vfwcvt",
+    "ext": "RVV",
+    "group": "rvv-fp-cvt",
+    "format": "OPFVV-VFUNARY0",
+    "forms": [
+      "xu.f.v",
+      "x.f.v",
+      "rtz.xu.f.v",
+      "rtz.x.f.v",
+      "f.xu.v",
+      "f.x.v",
+      "f.f.v"
+    ],
+    "sew": [
+      16,
+      32
+    ],
+    "expected": "supported",
+    "note": "widening convert"
+  },
+  {
+    "mnemonic": "vfncvt",
+    "ext": "RVV",
+    "group": "rvv-fp-cvt",
+    "format": "OPFVV-VFUNARY0",
+    "forms": [
+      "xu.f.w",
+      "x.f.w",
+      "rtz.xu.f.w",
+      "rtz.x.f.w",
+      "f.xu.w",
+      "f.x.w",
+      "f.f.w",
+      "rod.f.f.w"
+    ],
+    "sew": [
+      32,
+      64
+    ],
+    "expected": "supported",
+    "note": "narrowing convert (incl round-to-odd)"
+  },
+  {
+    "mnemonic": "vfwadd",
+    "ext": "RVV",
+    "group": "rvv-fp-widen",
+    "format": "OPFVV/VF",
+    "forms": [
+      "vv",
+      "vf",
+      "wv",
+      "wf"
+    ],
+    "sew": [
+      16,
+      32
+    ],
+    "expected": "supported",
+    "note": ""
+  },
+  {
+    "mnemonic": "vfwsub",
+    "ext": "RVV",
+    "group": "rvv-fp-widen",
+    "format": "OPFVV/VF",
+    "forms": [
+      "vv",
+      "vf",
+      "wv",
+      "wf"
+    ],
+    "sew": [
+      16,
+      32
+    ],
+    "expected": "supported",
+    "note": ""
+  },
+  {
+    "mnemonic": "vfwmul",
+    "ext": "RVV",
+    "group": "rvv-fp-widen",
+    "format": "OPFVV/VF",
+    "forms": [
+      "vv",
+      "vf"
+    ],
+    "sew": [
+      16,
+      32
+    ],
+    "expected": "supported",
+    "note": ""
+  },
+  {
+    "mnemonic": "vfwmacc",
+    "ext": "RVV",
+    "group": "rvv-fp-widen",
+    "format": "OPFVV/VF",
+    "forms": [
+      "vv",
+      "vf"
+    ],
+    "sew": [
+      16,
+      32
+    ],
+    "expected": "supported",
+    "note": ""
+  },
+  {
+    "mnemonic": "vfwnmacc",
+    "ext": "RVV",
+    "group": "rvv-fp-widen",
+    "format": "OPFVV/VF",
+    "forms": [
+      "vv",
+      "vf"
+    ],
+    "sew": [
+      16,
+      32
+    ],
+    "expected": "supported",
+    "note": ""
+  },
+  {
+    "mnemonic": "vfwmsac",
+    "ext": "RVV",
+    "group": "rvv-fp-widen",
+    "format": "OPFVV/VF",
+    "forms": [
+      "vv",
+      "vf"
+    ],
+    "sew": [
+      16,
+      32
+    ],
+    "expected": "supported",
+    "note": ""
+  },
+  {
+    "mnemonic": "vfwnmsac",
+    "ext": "RVV",
+    "group": "rvv-fp-widen",
+    "format": "OPFVV/VF",
+    "forms": [
+      "vv",
+      "vf"
+    ],
+    "sew": [
+      16,
+      32
+    ],
+    "expected": "supported",
+    "note": ""
+  },
+  {
+    "mnemonic": "vfmv.f.s",
+    "ext": "RVV",
+    "group": "rvv-fp-scalar",
+    "format": "OPFVV-VWFUNARY0",
+    "forms": [
+      "s"
+    ],
+    "sew": [
+      16,
+      32,
+      64
+    ],
+    "expected": "supported",
+    "note": "extract element0 -> f reg"
+  },
+  {
+    "mnemonic": "vfmv.s.f",
+    "ext": "RVV",
+    "group": "rvv-fp-scalar",
+    "format": "OPFVF-VRFUNARY0",
+    "forms": [
+      "f"
+    ],
+    "sew": [
+      16,
+      32,
+      64
+    ],
+    "expected": "supported",
+    "note": "f reg -> element0"
+  },
+  {
+    "mnemonic": "vfslide1up",
+    "ext": "RVV",
+    "group": "rvv-perm",
+    "format": "OPFVF",
+    "forms": [
+      "vf"
+    ],
+    "sew": [
+      16,
+      32,
+      64
+    ],
+    "expected": "supported",
+    "note": ""
+  },
+  {
+    "mnemonic": "vfslide1down",
+    "ext": "RVV",
+    "group": "rvv-perm",
+    "format": "OPFVF",
+    "forms": [
+      "vf"
+    ],
+    "sew": [
+      16,
+      32,
+      64
+    ],
+    "expected": "supported",
+    "note": ""
+  },
+  {
+    "mnemonic": "vredsum",
+    "ext": "RVV",
+    "group": "rvv-red-int",
+    "format": "OPMVV",
+    "forms": [
+      "vs"
+    ],
+    "sew": [
+      8,
+      16,
+      32,
+      64
+    ],
+    "expected": "supported",
+    "note": ""
+  },
+  {
+    "mnemonic": "vredand",
+    "ext": "RVV",
+    "group": "rvv-red-int",
+    "format": "OPMVV",
+    "forms": [
+      "vs"
+    ],
+    "sew": [
+      8,
+      16,
+      32,
+      64
+    ],
+    "expected": "supported",
+    "note": ""
+  },
+  {
+    "mnemonic": "vredor",
+    "ext": "RVV",
+    "group": "rvv-red-int",
+    "format": "OPMVV",
+    "forms": [
+      "vs"
+    ],
+    "sew": [
+      8,
+      16,
+      32,
+      64
+    ],
+    "expected": "supported",
+    "note": ""
+  },
+  {
+    "mnemonic": "vredxor",
+    "ext": "RVV",
+    "group": "rvv-red-int",
+    "format": "OPMVV",
+    "forms": [
+      "vs"
+    ],
+    "sew": [
+      8,
+      16,
+      32,
+      64
+    ],
+    "expected": "supported",
+    "note": ""
+  },
+  {
+    "mnemonic": "vredminu",
+    "ext": "RVV",
+    "group": "rvv-red-int",
+    "format": "OPMVV",
+    "forms": [
+      "vs"
+    ],
+    "sew": [
+      8,
+      16,
+      32,
+      64
+    ],
+    "expected": "supported",
+    "note": ""
+  },
+  {
+    "mnemonic": "vredmin",
+    "ext": "RVV",
+    "group": "rvv-red-int",
+    "format": "OPMVV",
+    "forms": [
+      "vs"
+    ],
+    "sew": [
+      8,
+      16,
+      32,
+      64
+    ],
+    "expected": "supported",
+    "note": ""
+  },
+  {
+    "mnemonic": "vredmaxu",
+    "ext": "RVV",
+    "group": "rvv-red-int",
+    "format": "OPMVV",
+    "forms": [
+      "vs"
+    ],
+    "sew": [
+      8,
+      16,
+      32,
+      64
+    ],
+    "expected": "supported",
+    "note": ""
+  },
+  {
+    "mnemonic": "vredmax",
+    "ext": "RVV",
+    "group": "rvv-red-int",
+    "format": "OPMVV",
+    "forms": [
+      "vs"
+    ],
+    "sew": [
+      8,
+      16,
+      32,
+      64
+    ],
+    "expected": "supported",
+    "note": ""
+  },
+  {
+    "mnemonic": "vwredsumu",
+    "ext": "RVV",
+    "group": "rvv-red-int",
+    "format": "OPIVV",
+    "forms": [
+      "vs"
+    ],
+    "sew": [
+      8,
+      16,
+      32
+    ],
+    "expected": "supported",
+    "note": "widening sum reduction unsigned"
+  },
+  {
+    "mnemonic": "vwredsum",
+    "ext": "RVV",
+    "group": "rvv-red-int",
+    "format": "OPIVV",
+    "forms": [
+      "vs"
+    ],
+    "sew": [
+      8,
+      16,
+      32
+    ],
+    "expected": "supported",
+    "note": ""
+  },
+  {
+    "mnemonic": "vfredosum",
+    "ext": "RVV",
+    "group": "rvv-red-fp",
+    "format": "OPFVV",
+    "forms": [
+      "vs"
+    ],
+    "sew": [
+      16,
+      32,
+      64
+    ],
+    "expected": "supported",
+    "note": "ordered FP sum (sequential)"
+  },
+  {
+    "mnemonic": "vfredusum",
+    "ext": "RVV",
+    "group": "rvv-red-fp",
+    "format": "OPFVV",
+    "forms": [
+      "vs"
+    ],
+    "sew": [
+      16,
+      32,
+      64
+    ],
+    "expected": "supported",
+    "note": "unordered FP sum: order impl-defined, pin inputs for diff"
+  },
+  {
+    "mnemonic": "vfredmin",
+    "ext": "RVV",
+    "group": "rvv-red-fp",
+    "format": "OPFVV",
+    "forms": [
+      "vs"
+    ],
+    "sew": [
+      16,
+      32,
+      64
+    ],
+    "expected": "supported",
+    "note": ""
+  },
+  {
+    "mnemonic": "vfredmax",
+    "ext": "RVV",
+    "group": "rvv-red-fp",
+    "format": "OPFVV",
+    "forms": [
+      "vs"
+    ],
+    "sew": [
+      16,
+      32,
+      64
+    ],
+    "expected": "supported",
+    "note": ""
+  },
+  {
+    "mnemonic": "vfwredosum",
+    "ext": "RVV",
+    "group": "rvv-red-fp",
+    "format": "OPFVV",
+    "forms": [
+      "vs"
+    ],
+    "sew": [
+      16,
+      32
+    ],
+    "expected": "supported",
+    "note": "widening ordered FP sum"
+  },
+  {
+    "mnemonic": "vfwredusum",
+    "ext": "RVV",
+    "group": "rvv-red-fp",
+    "format": "OPFVV",
+    "forms": [
+      "vs"
+    ],
+    "sew": [
+      16,
+      32
+    ],
+    "expected": "supported",
+    "note": "widening unordered: pin inputs for diff"
+  },
+  {
+    "mnemonic": "vmand",
+    "ext": "RVV",
+    "group": "rvv-mask-logical",
+    "format": "OPMVV-MM",
+    "forms": [
+      "mm"
+    ],
+    "sew": [],
+    "expected": "supported",
+    "note": ""
+  },
+  {
+    "mnemonic": "vmnand",
+    "ext": "RVV",
+    "group": "rvv-mask-logical",
+    "format": "OPMVV-MM",
+    "forms": [
+      "mm"
+    ],
+    "sew": [],
+    "expected": "supported",
+    "note": ""
+  },
+  {
+    "mnemonic": "vmandn",
+    "ext": "RVV",
+    "group": "rvv-mask-logical",
+    "format": "OPMVV-MM",
+    "forms": [
+      "mm"
+    ],
+    "sew": [],
+    "expected": "supported",
+    "note": "and-not (a & ~b)"
+  },
+  {
+    "mnemonic": "vmxor",
+    "ext": "RVV",
+    "group": "rvv-mask-logical",
+    "format": "OPMVV-MM",
+    "forms": [
+      "mm"
+    ],
+    "sew": [],
+    "expected": "supported",
+    "note": ""
+  },
+  {
+    "mnemonic": "vmor",
+    "ext": "RVV",
+    "group": "rvv-mask-logical",
+    "format": "OPMVV-MM",
+    "forms": [
+      "mm"
+    ],
+    "sew": [],
+    "expected": "supported",
+    "note": ""
+  },
+  {
+    "mnemonic": "vmnor",
+    "ext": "RVV",
+    "group": "rvv-mask-logical",
+    "format": "OPMVV-MM",
+    "forms": [
+      "mm"
+    ],
+    "sew": [],
+    "expected": "supported",
+    "note": ""
+  },
+  {
+    "mnemonic": "vmorn",
+    "ext": "RVV",
+    "group": "rvv-mask-logical",
+    "format": "OPMVV-MM",
+    "forms": [
+      "mm"
+    ],
+    "sew": [],
+    "expected": "supported",
+    "note": "or-not (a | ~b)"
+  },
+  {
+    "mnemonic": "vmxnor",
+    "ext": "RVV",
+    "group": "rvv-mask-logical",
+    "format": "OPMVV-MM",
+    "forms": [
+      "mm"
+    ],
+    "sew": [],
+    "expected": "supported",
+    "note": ""
+  },
+  {
+    "mnemonic": "vcpop.m",
+    "ext": "RVV",
+    "group": "rvv-mask-pop",
+    "format": "OPMVV-VWXUNARY0",
+    "forms": [
+      "m"
+    ],
+    "sew": [],
+    "expected": "supported",
+    "note": "population count of mask"
+  },
+  {
+    "mnemonic": "vfirst.m",
+    "ext": "RVV",
+    "group": "rvv-mask-pop",
+    "format": "OPMVV-VWXUNARY0",
+    "forms": [
+      "m"
+    ],
+    "sew": [],
+    "expected": "supported",
+    "note": "index of first set bit (-1 if none)"
+  },
+  {
+    "mnemonic": "vmsbf.m",
+    "ext": "RVV",
+    "group": "rvv-mask-set",
+    "format": "OPMVV-VMUNARY0",
+    "forms": [
+      "m"
+    ],
+    "sew": [],
+    "expected": "supported",
+    "note": "set-before-first"
+  },
+  {
+    "mnemonic": "vmsif.m",
+    "ext": "RVV",
+    "group": "rvv-mask-set",
+    "format": "OPMVV-VMUNARY0",
+    "forms": [
+      "m"
+    ],
+    "sew": [],
+    "expected": "supported",
+    "note": "set-including-first"
+  },
+  {
+    "mnemonic": "vmsof.m",
+    "ext": "RVV",
+    "group": "rvv-mask-set",
+    "format": "OPMVV-VMUNARY0",
+    "forms": [
+      "m"
+    ],
+    "sew": [],
+    "expected": "supported",
+    "note": "set-only-first"
+  },
+  {
+    "mnemonic": "viota.m",
+    "ext": "RVV",
+    "group": "rvv-mask-iota",
+    "format": "OPMVV-VMUNARY0",
+    "forms": [
+      "m"
+    ],
+    "sew": [
+      8,
+      16,
+      32,
+      64
+    ],
+    "expected": "supported",
+    "note": "prefix sum of mask"
+  },
+  {
+    "mnemonic": "vid.v",
+    "ext": "RVV",
+    "group": "rvv-mask-iota",
+    "format": "OPMVV-VMUNARY0",
+    "forms": [
+      "v"
+    ],
+    "sew": [
+      8,
+      16,
+      32,
+      64
+    ],
+    "expected": "supported",
+    "note": "element index"
+  },
+  {
+    "mnemonic": "vmv.x.s",
+    "ext": "RVV",
+    "group": "rvv-mask-xmv",
+    "format": "OPMVV-VWXUNARY0",
+    "forms": [
+      "s"
+    ],
+    "sew": [
+      8,
+      16,
+      32,
+      64
+    ],
+    "expected": "supported",
+    "note": "element0 -> x reg"
+  },
+  {
+    "mnemonic": "vmv.s.x",
+    "ext": "RVV",
+    "group": "rvv-mask-xmv",
+    "format": "OPMVX-VRXUNARY0",
+    "forms": [
+      "x"
+    ],
+    "sew": [
+      8,
+      16,
+      32,
+      64
+    ],
+    "expected": "supported",
+    "note": "x reg -> element0"
+  },
+  {
+    "mnemonic": "vslideup",
+    "ext": "RVV",
+    "group": "rvv-perm",
+    "format": "OPIVX/VI",
+    "forms": [
+      "vx",
+      "vi"
+    ],
+    "sew": [
+      8,
+      16,
+      32,
+      64
+    ],
+    "expected": "supported",
+    "note": ""
+  },
+  {
+    "mnemonic": "vslidedown",
+    "ext": "RVV",
+    "group": "rvv-perm",
+    "format": "OPIVX/VI",
+    "forms": [
+      "vx",
+      "vi"
+    ],
+    "sew": [
+      8,
+      16,
+      32,
+      64
+    ],
+    "expected": "supported",
+    "note": ""
+  },
+  {
+    "mnemonic": "vslide1up",
+    "ext": "RVV",
+    "group": "rvv-perm",
+    "format": "OPMVX",
+    "forms": [
+      "vx"
+    ],
+    "sew": [
+      8,
+      16,
+      32,
+      64
+    ],
+    "expected": "supported",
+    "note": ""
+  },
+  {
+    "mnemonic": "vslide1down",
+    "ext": "RVV",
+    "group": "rvv-perm",
+    "format": "OPMVX",
+    "forms": [
+      "vx"
+    ],
+    "sew": [
+      8,
+      16,
+      32,
+      64
+    ],
+    "expected": "supported",
+    "note": ""
+  },
+  {
+    "mnemonic": "vrgather",
+    "ext": "RVV",
+    "group": "rvv-perm",
+    "format": "OPIVV/VX/VI",
+    "forms": [
+      "vv",
+      "vx",
+      "vi"
+    ],
+    "sew": [
+      8,
+      16,
+      32,
+      64
+    ],
+    "expected": "blocked_illegal",
+    "note": "not in op enum -> dispatcher illegal"
+  },
+  {
+    "mnemonic": "vrgatherei16",
+    "ext": "RVV",
+    "group": "rvv-perm",
+    "format": "OPIVV",
+    "forms": [
+      "vv"
+    ],
+    "sew": [
+      8,
+      16,
+      32,
+      64
+    ],
+    "expected": "blocked_illegal",
+    "note": "not in op enum -> dispatcher illegal"
+  },
+  {
+    "mnemonic": "vcompress",
+    "ext": "RVV",
+    "group": "rvv-perm",
+    "format": "OPMVV",
+    "forms": [
+      "vm"
+    ],
+    "sew": [
+      8,
+      16,
+      32,
+      64
+    ],
+    "expected": "blocked_illegal",
+    "note": "not in op enum -> dispatcher illegal"
+  },
+  {
+    "mnemonic": "vmv1r.v",
+    "ext": "RVV",
+    "group": "rvv-perm",
+    "format": "OPIVI-whole",
+    "forms": [
+      "v"
+    ],
+    "sew": [],
+    "expected": "supported",
+    "note": "whole-register move (decoded as VMERGE)"
+  },
+  {
+    "mnemonic": "vmv2r.v",
+    "ext": "RVV",
+    "group": "rvv-perm",
+    "format": "OPIVI-whole",
+    "forms": [
+      "v"
+    ],
+    "sew": [],
+    "expected": "supported",
+    "note": ""
+  },
+  {
+    "mnemonic": "vmv4r.v",
+    "ext": "RVV",
+    "group": "rvv-perm",
+    "format": "OPIVI-whole",
+    "forms": [
+      "v"
+    ],
+    "sew": [],
+    "expected": "supported",
+    "note": ""
+  },
+  {
+    "mnemonic": "vmv8r.v",
+    "ext": "RVV",
+    "group": "rvv-perm",
+    "format": "OPIVI-whole",
+    "forms": [
+      "v"
+    ],
+    "sew": [],
+    "expected": "supported",
+    "note": ""
+  },
+  {
+    "mnemonic": "add",
+    "ext": "RV64",
+    "group": "rv64i-reg",
+    "format": "R",
+    "forms": [
+      "r"
+    ],
+    "sew": [],
+    "expected": "supported",
+    "note": ""
+  },
+  {
+    "mnemonic": "sub",
+    "ext": "RV64",
+    "group": "rv64i-reg",
+    "format": "R",
+    "forms": [
+      "r"
+    ],
+    "sew": [],
+    "expected": "supported",
+    "note": ""
+  },
+  {
+    "mnemonic": "sll",
+    "ext": "RV64",
+    "group": "rv64i-reg",
+    "format": "R",
+    "forms": [
+      "r"
+    ],
+    "sew": [],
+    "expected": "supported",
+    "note": ""
+  },
+  {
+    "mnemonic": "slt",
+    "ext": "RV64",
+    "group": "rv64i-reg",
+    "format": "R",
+    "forms": [
+      "r"
+    ],
+    "sew": [],
+    "expected": "supported",
+    "note": ""
+  },
+  {
+    "mnemonic": "sltu",
+    "ext": "RV64",
+    "group": "rv64i-reg",
+    "format": "R",
+    "forms": [
+      "r"
+    ],
+    "sew": [],
+    "expected": "supported",
+    "note": ""
+  },
+  {
+    "mnemonic": "xor",
+    "ext": "RV64",
+    "group": "rv64i-reg",
+    "format": "R",
+    "forms": [
+      "r"
+    ],
+    "sew": [],
+    "expected": "supported",
+    "note": ""
+  },
+  {
+    "mnemonic": "srl",
+    "ext": "RV64",
+    "group": "rv64i-reg",
+    "format": "R",
+    "forms": [
+      "r"
+    ],
+    "sew": [],
+    "expected": "supported",
+    "note": ""
+  },
+  {
+    "mnemonic": "sra",
+    "ext": "RV64",
+    "group": "rv64i-reg",
+    "format": "R",
+    "forms": [
+      "r"
+    ],
+    "sew": [],
+    "expected": "supported",
+    "note": ""
+  },
+  {
+    "mnemonic": "or",
+    "ext": "RV64",
+    "group": "rv64i-reg",
+    "format": "R",
+    "forms": [
+      "r"
+    ],
+    "sew": [],
+    "expected": "supported",
+    "note": ""
+  },
+  {
+    "mnemonic": "and",
+    "ext": "RV64",
+    "group": "rv64i-reg",
+    "format": "R",
+    "forms": [
+      "r"
+    ],
+    "sew": [],
+    "expected": "supported",
+    "note": ""
+  },
+  {
+    "mnemonic": "addi",
+    "ext": "RV64",
+    "group": "rv64i-imm",
+    "format": "I",
+    "forms": [
+      "i"
+    ],
+    "sew": [],
+    "expected": "supported",
+    "note": ""
+  },
+  {
+    "mnemonic": "slti",
+    "ext": "RV64",
+    "group": "rv64i-imm",
+    "format": "I",
+    "forms": [
+      "i"
+    ],
+    "sew": [],
+    "expected": "supported",
+    "note": ""
+  },
+  {
+    "mnemonic": "sltiu",
+    "ext": "RV64",
+    "group": "rv64i-imm",
+    "format": "I",
+    "forms": [
+      "i"
+    ],
+    "sew": [],
+    "expected": "supported",
+    "note": ""
+  },
+  {
+    "mnemonic": "xori",
+    "ext": "RV64",
+    "group": "rv64i-imm",
+    "format": "I",
+    "forms": [
+      "i"
+    ],
+    "sew": [],
+    "expected": "supported",
+    "note": ""
+  },
+  {
+    "mnemonic": "ori",
+    "ext": "RV64",
+    "group": "rv64i-imm",
+    "format": "I",
+    "forms": [
+      "i"
+    ],
+    "sew": [],
+    "expected": "supported",
+    "note": ""
+  },
+  {
+    "mnemonic": "andi",
+    "ext": "RV64",
+    "group": "rv64i-imm",
+    "format": "I",
+    "forms": [
+      "i"
+    ],
+    "sew": [],
+    "expected": "supported",
+    "note": ""
+  },
+  {
+    "mnemonic": "slli",
+    "ext": "RV64",
+    "group": "rv64i-imm",
+    "format": "I",
+    "forms": [
+      "i"
+    ],
+    "sew": [],
+    "expected": "supported",
+    "note": ""
+  },
+  {
+    "mnemonic": "srli",
+    "ext": "RV64",
+    "group": "rv64i-imm",
+    "format": "I",
+    "forms": [
+      "i"
+    ],
+    "sew": [],
+    "expected": "supported",
+    "note": ""
+  },
+  {
+    "mnemonic": "srai",
+    "ext": "RV64",
+    "group": "rv64i-imm",
+    "format": "I",
+    "forms": [
+      "i"
+    ],
+    "sew": [],
+    "expected": "supported",
+    "note": ""
+  },
+  {
+    "mnemonic": "lui",
+    "ext": "RV64",
+    "group": "rv64i-imm",
+    "format": "U",
+    "forms": [
+      "u"
+    ],
+    "sew": [],
+    "expected": "supported",
+    "note": ""
+  },
+  {
+    "mnemonic": "auipc",
+    "ext": "RV64",
+    "group": "rv64i-imm",
+    "format": "U",
+    "forms": [
+      "u"
+    ],
+    "sew": [],
+    "expected": "supported",
+    "note": ""
+  },
+  {
+    "mnemonic": "addw",
+    "ext": "RV64",
+    "group": "rv64i-word",
+    "format": "R",
+    "forms": [
+      "r"
+    ],
+    "sew": [],
+    "expected": "supported",
+    "note": ""
+  },
+  {
+    "mnemonic": "subw",
+    "ext": "RV64",
+    "group": "rv64i-word",
+    "format": "R",
+    "forms": [
+      "r"
+    ],
+    "sew": [],
+    "expected": "supported",
+    "note": ""
+  },
+  {
+    "mnemonic": "sllw",
+    "ext": "RV64",
+    "group": "rv64i-word",
+    "format": "R",
+    "forms": [
+      "r"
+    ],
+    "sew": [],
+    "expected": "supported",
+    "note": ""
+  },
+  {
+    "mnemonic": "srlw",
+    "ext": "RV64",
+    "group": "rv64i-word",
+    "format": "R",
+    "forms": [
+      "r"
+    ],
+    "sew": [],
+    "expected": "supported",
+    "note": ""
+  },
+  {
+    "mnemonic": "sraw",
+    "ext": "RV64",
+    "group": "rv64i-word",
+    "format": "R",
+    "forms": [
+      "r"
+    ],
+    "sew": [],
+    "expected": "supported",
+    "note": ""
+  },
+  {
+    "mnemonic": "addiw",
+    "ext": "RV64",
+    "group": "rv64i-word",
+    "format": "I",
+    "forms": [
+      "i"
+    ],
+    "sew": [],
+    "expected": "supported",
+    "note": ""
+  },
+  {
+    "mnemonic": "slliw",
+    "ext": "RV64",
+    "group": "rv64i-word",
+    "format": "I",
+    "forms": [
+      "i"
+    ],
+    "sew": [],
+    "expected": "supported",
+    "note": ""
+  },
+  {
+    "mnemonic": "srliw",
+    "ext": "RV64",
+    "group": "rv64i-word",
+    "format": "I",
+    "forms": [
+      "i"
+    ],
+    "sew": [],
+    "expected": "supported",
+    "note": ""
+  },
+  {
+    "mnemonic": "sraiw",
+    "ext": "RV64",
+    "group": "rv64i-word",
+    "format": "I",
+    "forms": [
+      "i"
+    ],
+    "sew": [],
+    "expected": "supported",
+    "note": ""
+  },
+  {
+    "mnemonic": "lb",
+    "ext": "RV64",
+    "group": "rv64i-load",
+    "format": "I",
+    "forms": [
+      "i"
+    ],
+    "sew": [],
+    "expected": "supported",
+    "note": ""
+  },
+  {
+    "mnemonic": "lh",
+    "ext": "RV64",
+    "group": "rv64i-load",
+    "format": "I",
+    "forms": [
+      "i"
+    ],
+    "sew": [],
+    "expected": "supported",
+    "note": ""
+  },
+  {
+    "mnemonic": "lw",
+    "ext": "RV64",
+    "group": "rv64i-load",
+    "format": "I",
+    "forms": [
+      "i"
+    ],
+    "sew": [],
+    "expected": "supported",
+    "note": ""
+  },
+  {
+    "mnemonic": "ld",
+    "ext": "RV64",
+    "group": "rv64i-load",
+    "format": "I",
+    "forms": [
+      "i"
+    ],
+    "sew": [],
+    "expected": "supported",
+    "note": ""
+  },
+  {
+    "mnemonic": "lbu",
+    "ext": "RV64",
+    "group": "rv64i-load",
+    "format": "I",
+    "forms": [
+      "i"
+    ],
+    "sew": [],
+    "expected": "supported",
+    "note": ""
+  },
+  {
+    "mnemonic": "lhu",
+    "ext": "RV64",
+    "group": "rv64i-load",
+    "format": "I",
+    "forms": [
+      "i"
+    ],
+    "sew": [],
+    "expected": "supported",
+    "note": ""
+  },
+  {
+    "mnemonic": "lwu",
+    "ext": "RV64",
+    "group": "rv64i-load",
+    "format": "I",
+    "forms": [
+      "i"
+    ],
+    "sew": [],
+    "expected": "supported",
+    "note": ""
+  },
+  {
+    "mnemonic": "sb",
+    "ext": "RV64",
+    "group": "rv64i-store",
+    "format": "S",
+    "forms": [
+      "s"
+    ],
+    "sew": [],
+    "expected": "supported",
+    "note": ""
+  },
+  {
+    "mnemonic": "sh",
+    "ext": "RV64",
+    "group": "rv64i-store",
+    "format": "S",
+    "forms": [
+      "s"
+    ],
+    "sew": [],
+    "expected": "supported",
+    "note": ""
+  },
+  {
+    "mnemonic": "sw",
+    "ext": "RV64",
+    "group": "rv64i-store",
+    "format": "S",
+    "forms": [
+      "s"
+    ],
+    "sew": [],
+    "expected": "supported",
+    "note": ""
+  },
+  {
+    "mnemonic": "sd",
+    "ext": "RV64",
+    "group": "rv64i-store",
+    "format": "S",
+    "forms": [
+      "s"
+    ],
+    "sew": [],
+    "expected": "supported",
+    "note": ""
+  },
+  {
+    "mnemonic": "beq",
+    "ext": "RV64",
+    "group": "rv64i-branch",
+    "format": "B",
+    "forms": [
+      "b"
+    ],
+    "sew": [],
+    "expected": "supported",
+    "note": ""
+  },
+  {
+    "mnemonic": "bne",
+    "ext": "RV64",
+    "group": "rv64i-branch",
+    "format": "B",
+    "forms": [
+      "b"
+    ],
+    "sew": [],
+    "expected": "supported",
+    "note": ""
+  },
+  {
+    "mnemonic": "blt",
+    "ext": "RV64",
+    "group": "rv64i-branch",
+    "format": "B",
+    "forms": [
+      "b"
+    ],
+    "sew": [],
+    "expected": "supported",
+    "note": ""
+  },
+  {
+    "mnemonic": "bge",
+    "ext": "RV64",
+    "group": "rv64i-branch",
+    "format": "B",
+    "forms": [
+      "b"
+    ],
+    "sew": [],
+    "expected": "supported",
+    "note": ""
+  },
+  {
+    "mnemonic": "bltu",
+    "ext": "RV64",
+    "group": "rv64i-branch",
+    "format": "B",
+    "forms": [
+      "b"
+    ],
+    "sew": [],
+    "expected": "supported",
+    "note": ""
+  },
+  {
+    "mnemonic": "bgeu",
+    "ext": "RV64",
+    "group": "rv64i-branch",
+    "format": "B",
+    "forms": [
+      "b"
+    ],
+    "sew": [],
+    "expected": "supported",
+    "note": ""
+  },
+  {
+    "mnemonic": "jal",
+    "ext": "RV64",
+    "group": "rv64i-jump",
+    "format": "J",
+    "forms": [
+      "j"
+    ],
+    "sew": [],
+    "expected": "supported",
+    "note": ""
+  },
+  {
+    "mnemonic": "jalr",
+    "ext": "RV64",
+    "group": "rv64i-jump",
+    "format": "I",
+    "forms": [
+      "i"
+    ],
+    "sew": [],
+    "expected": "supported",
+    "note": ""
+  },
+  {
+    "mnemonic": "fence",
+    "ext": "RV64",
+    "group": "rv64i-sys",
+    "format": "I",
+    "forms": [
+      "x"
+    ],
+    "sew": [],
+    "expected": "supported",
+    "note": "Zifencei base fence"
+  },
+  {
+    "mnemonic": "fence.i",
+    "ext": "RV64",
+    "group": "rv64i-sys",
+    "format": "I",
+    "forms": [
+      "x"
+    ],
+    "sew": [],
+    "expected": "supported",
+    "note": "Zifencei"
+  },
+  {
+    "mnemonic": "ecall",
+    "ext": "RV64",
+    "group": "rv64i-sys",
+    "format": "I",
+    "forms": [
+      "x"
+    ],
+    "sew": [],
+    "expected": "supported",
+    "note": "traps; tested via deliberate trap path"
+  },
+  {
+    "mnemonic": "ebreak",
+    "ext": "RV64",
+    "group": "rv64i-sys",
+    "format": "I",
+    "forms": [
+      "x"
+    ],
+    "sew": [],
+    "expected": "supported",
+    "note": "traps; tested via deliberate trap path"
+  },
+  {
+    "mnemonic": "mul",
+    "ext": "RV64",
+    "group": "rv64m",
+    "format": "R",
+    "forms": [
+      "r"
+    ],
+    "sew": [],
+    "expected": "supported",
+    "note": ""
+  },
+  {
+    "mnemonic": "mulh",
+    "ext": "RV64",
+    "group": "rv64m",
+    "format": "R",
+    "forms": [
+      "r"
+    ],
+    "sew": [],
+    "expected": "supported",
+    "note": ""
+  },
+  {
+    "mnemonic": "mulhsu",
+    "ext": "RV64",
+    "group": "rv64m",
+    "format": "R",
+    "forms": [
+      "r"
+    ],
+    "sew": [],
+    "expected": "supported",
+    "note": ""
+  },
+  {
+    "mnemonic": "mulhu",
+    "ext": "RV64",
+    "group": "rv64m",
+    "format": "R",
+    "forms": [
+      "r"
+    ],
+    "sew": [],
+    "expected": "supported",
+    "note": ""
+  },
+  {
+    "mnemonic": "div",
+    "ext": "RV64",
+    "group": "rv64m",
+    "format": "R",
+    "forms": [
+      "r"
+    ],
+    "sew": [],
+    "expected": "supported",
+    "note": ""
+  },
+  {
+    "mnemonic": "divu",
+    "ext": "RV64",
+    "group": "rv64m",
+    "format": "R",
+    "forms": [
+      "r"
+    ],
+    "sew": [],
+    "expected": "supported",
+    "note": ""
+  },
+  {
+    "mnemonic": "rem",
+    "ext": "RV64",
+    "group": "rv64m",
+    "format": "R",
+    "forms": [
+      "r"
+    ],
+    "sew": [],
+    "expected": "supported",
+    "note": ""
+  },
+  {
+    "mnemonic": "remu",
+    "ext": "RV64",
+    "group": "rv64m",
+    "format": "R",
+    "forms": [
+      "r"
+    ],
+    "sew": [],
+    "expected": "supported",
+    "note": ""
+  },
+  {
+    "mnemonic": "mulw",
+    "ext": "RV64",
+    "group": "rv64m",
+    "format": "R",
+    "forms": [
+      "r"
+    ],
+    "sew": [],
+    "expected": "supported",
+    "note": ""
+  },
+  {
+    "mnemonic": "divw",
+    "ext": "RV64",
+    "group": "rv64m",
+    "format": "R",
+    "forms": [
+      "r"
+    ],
+    "sew": [],
+    "expected": "supported",
+    "note": ""
+  },
+  {
+    "mnemonic": "divuw",
+    "ext": "RV64",
+    "group": "rv64m",
+    "format": "R",
+    "forms": [
+      "r"
+    ],
+    "sew": [],
+    "expected": "supported",
+    "note": ""
+  },
+  {
+    "mnemonic": "remw",
+    "ext": "RV64",
+    "group": "rv64m",
+    "format": "R",
+    "forms": [
+      "r"
+    ],
+    "sew": [],
+    "expected": "supported",
+    "note": ""
+  },
+  {
+    "mnemonic": "remuw",
+    "ext": "RV64",
+    "group": "rv64m",
+    "format": "R",
+    "forms": [
+      "r"
+    ],
+    "sew": [],
+    "expected": "supported",
+    "note": ""
+  },
+  {
+    "mnemonic": "lr.w",
+    "ext": "RV64",
+    "group": "rv64a",
+    "format": "R",
+    "forms": [
+      "r"
+    ],
+    "sew": [],
+    "expected": "supported",
+    "note": ""
+  },
+  {
+    "mnemonic": "sc.w",
+    "ext": "RV64",
+    "group": "rv64a",
+    "format": "R",
+    "forms": [
+      "r"
+    ],
+    "sew": [],
+    "expected": "supported",
+    "note": ""
+  },
+  {
+    "mnemonic": "lr.d",
+    "ext": "RV64",
+    "group": "rv64a",
+    "format": "R",
+    "forms": [
+      "r"
+    ],
+    "sew": [],
+    "expected": "supported",
+    "note": ""
+  },
+  {
+    "mnemonic": "sc.d",
+    "ext": "RV64",
+    "group": "rv64a",
+    "format": "R",
+    "forms": [
+      "r"
+    ],
+    "sew": [],
+    "expected": "supported",
+    "note": ""
+  },
+  {
+    "mnemonic": "amoswap.w",
+    "ext": "RV64",
+    "group": "rv64a",
+    "format": "R",
+    "forms": [
+      "r"
+    ],
+    "sew": [],
+    "expected": "supported",
+    "note": ""
+  },
+  {
+    "mnemonic": "amoswap.d",
+    "ext": "RV64",
+    "group": "rv64a",
+    "format": "R",
+    "forms": [
+      "r"
+    ],
+    "sew": [],
+    "expected": "supported",
+    "note": ""
+  },
+  {
+    "mnemonic": "amoadd.w",
+    "ext": "RV64",
+    "group": "rv64a",
+    "format": "R",
+    "forms": [
+      "r"
+    ],
+    "sew": [],
+    "expected": "supported",
+    "note": ""
+  },
+  {
+    "mnemonic": "amoadd.d",
+    "ext": "RV64",
+    "group": "rv64a",
+    "format": "R",
+    "forms": [
+      "r"
+    ],
+    "sew": [],
+    "expected": "supported",
+    "note": ""
+  },
+  {
+    "mnemonic": "amoxor.w",
+    "ext": "RV64",
+    "group": "rv64a",
+    "format": "R",
+    "forms": [
+      "r"
+    ],
+    "sew": [],
+    "expected": "supported",
+    "note": ""
+  },
+  {
+    "mnemonic": "amoxor.d",
+    "ext": "RV64",
+    "group": "rv64a",
+    "format": "R",
+    "forms": [
+      "r"
+    ],
+    "sew": [],
+    "expected": "supported",
+    "note": ""
+  },
+  {
+    "mnemonic": "amoand.w",
+    "ext": "RV64",
+    "group": "rv64a",
+    "format": "R",
+    "forms": [
+      "r"
+    ],
+    "sew": [],
+    "expected": "supported",
+    "note": ""
+  },
+  {
+    "mnemonic": "amoand.d",
+    "ext": "RV64",
+    "group": "rv64a",
+    "format": "R",
+    "forms": [
+      "r"
+    ],
+    "sew": [],
+    "expected": "supported",
+    "note": ""
+  },
+  {
+    "mnemonic": "amoor.w",
+    "ext": "RV64",
+    "group": "rv64a",
+    "format": "R",
+    "forms": [
+      "r"
+    ],
+    "sew": [],
+    "expected": "supported",
+    "note": ""
+  },
+  {
+    "mnemonic": "amoor.d",
+    "ext": "RV64",
+    "group": "rv64a",
+    "format": "R",
+    "forms": [
+      "r"
+    ],
+    "sew": [],
+    "expected": "supported",
+    "note": ""
+  },
+  {
+    "mnemonic": "amomin.w",
+    "ext": "RV64",
+    "group": "rv64a",
+    "format": "R",
+    "forms": [
+      "r"
+    ],
+    "sew": [],
+    "expected": "supported",
+    "note": ""
+  },
+  {
+    "mnemonic": "amomin.d",
+    "ext": "RV64",
+    "group": "rv64a",
+    "format": "R",
+    "forms": [
+      "r"
+    ],
+    "sew": [],
+    "expected": "supported",
+    "note": ""
+  },
+  {
+    "mnemonic": "amomax.w",
+    "ext": "RV64",
+    "group": "rv64a",
+    "format": "R",
+    "forms": [
+      "r"
+    ],
+    "sew": [],
+    "expected": "supported",
+    "note": ""
+  },
+  {
+    "mnemonic": "amomax.d",
+    "ext": "RV64",
+    "group": "rv64a",
+    "format": "R",
+    "forms": [
+      "r"
+    ],
+    "sew": [],
+    "expected": "supported",
+    "note": ""
+  },
+  {
+    "mnemonic": "amominu.w",
+    "ext": "RV64",
+    "group": "rv64a",
+    "format": "R",
+    "forms": [
+      "r"
+    ],
+    "sew": [],
+    "expected": "supported",
+    "note": ""
+  },
+  {
+    "mnemonic": "amominu.d",
+    "ext": "RV64",
+    "group": "rv64a",
+    "format": "R",
+    "forms": [
+      "r"
+    ],
+    "sew": [],
+    "expected": "supported",
+    "note": ""
+  },
+  {
+    "mnemonic": "amomaxu.w",
+    "ext": "RV64",
+    "group": "rv64a",
+    "format": "R",
+    "forms": [
+      "r"
+    ],
+    "sew": [],
+    "expected": "supported",
+    "note": ""
+  },
+  {
+    "mnemonic": "amomaxu.d",
+    "ext": "RV64",
+    "group": "rv64a",
+    "format": "R",
+    "forms": [
+      "r"
+    ],
+    "sew": [],
+    "expected": "supported",
+    "note": ""
+  },
+  {
+    "mnemonic": "flw",
+    "ext": "RV64",
+    "group": "rv64f-mem",
+    "format": "I",
+    "forms": [
+      "i"
+    ],
+    "sew": [],
+    "expected": "supported",
+    "note": ""
+  },
+  {
+    "mnemonic": "fsw",
+    "ext": "RV64",
+    "group": "rv64f-mem",
+    "format": "S",
+    "forms": [
+      "s"
+    ],
+    "sew": [],
+    "expected": "supported",
+    "note": ""
+  },
+  {
+    "mnemonic": "fadd.s",
+    "ext": "RV64",
+    "group": "rv64f-arith",
+    "format": "R",
+    "forms": [
+      "r"
+    ],
+    "sew": [],
+    "expected": "supported",
+    "note": ""
+  },
+  {
+    "mnemonic": "fsub.s",
+    "ext": "RV64",
+    "group": "rv64f-arith",
+    "format": "R",
+    "forms": [
+      "r"
+    ],
+    "sew": [],
+    "expected": "supported",
+    "note": ""
+  },
+  {
+    "mnemonic": "fmul.s",
+    "ext": "RV64",
+    "group": "rv64f-arith",
+    "format": "R",
+    "forms": [
+      "r"
+    ],
+    "sew": [],
+    "expected": "supported",
+    "note": ""
+  },
+  {
+    "mnemonic": "fdiv.s",
+    "ext": "RV64",
+    "group": "rv64f-arith",
+    "format": "R",
+    "forms": [
+      "r"
+    ],
+    "sew": [],
+    "expected": "supported",
+    "note": ""
+  },
+  {
+    "mnemonic": "fsqrt.s",
+    "ext": "RV64",
+    "group": "rv64f-arith",
+    "format": "R",
+    "forms": [
+      "r"
+    ],
+    "sew": [],
+    "expected": "supported",
+    "note": ""
+  },
+  {
+    "mnemonic": "fmadd.s",
+    "ext": "RV64",
+    "group": "rv64f-fma",
+    "format": "R4",
+    "forms": [
+      "r4"
+    ],
+    "sew": [],
+    "expected": "supported",
+    "note": ""
+  },
+  {
+    "mnemonic": "fmsub.s",
+    "ext": "RV64",
+    "group": "rv64f-fma",
+    "format": "R4",
+    "forms": [
+      "r4"
+    ],
+    "sew": [],
+    "expected": "supported",
+    "note": ""
+  },
+  {
+    "mnemonic": "fnmadd.s",
+    "ext": "RV64",
+    "group": "rv64f-fma",
+    "format": "R4",
+    "forms": [
+      "r4"
+    ],
+    "sew": [],
+    "expected": "supported",
+    "note": ""
+  },
+  {
+    "mnemonic": "fnmsub.s",
+    "ext": "RV64",
+    "group": "rv64f-fma",
+    "format": "R4",
+    "forms": [
+      "r4"
+    ],
+    "sew": [],
+    "expected": "supported",
+    "note": ""
+  },
+  {
+    "mnemonic": "fsgnj.s",
+    "ext": "RV64",
+    "group": "rv64f-misc",
+    "format": "R",
+    "forms": [
+      "r"
+    ],
+    "sew": [],
+    "expected": "supported",
+    "note": ""
+  },
+  {
+    "mnemonic": "fsgnjn.s",
+    "ext": "RV64",
+    "group": "rv64f-misc",
+    "format": "R",
+    "forms": [
+      "r"
+    ],
+    "sew": [],
+    "expected": "supported",
+    "note": ""
+  },
+  {
+    "mnemonic": "fsgnjx.s",
+    "ext": "RV64",
+    "group": "rv64f-misc",
+    "format": "R",
+    "forms": [
+      "r"
+    ],
+    "sew": [],
+    "expected": "supported",
+    "note": ""
+  },
+  {
+    "mnemonic": "fmin.s",
+    "ext": "RV64",
+    "group": "rv64f-misc",
+    "format": "R",
+    "forms": [
+      "r"
+    ],
+    "sew": [],
+    "expected": "supported",
+    "note": ""
+  },
+  {
+    "mnemonic": "fmax.s",
+    "ext": "RV64",
+    "group": "rv64f-misc",
+    "format": "R",
+    "forms": [
+      "r"
+    ],
+    "sew": [],
+    "expected": "supported",
+    "note": ""
+  },
+  {
+    "mnemonic": "fcvt.w.s",
+    "ext": "RV64",
+    "group": "rv64f-cvt",
+    "format": "R",
+    "forms": [
+      "r"
+    ],
+    "sew": [],
+    "expected": "supported",
+    "note": ""
+  },
+  {
+    "mnemonic": "fcvt.wu.s",
+    "ext": "RV64",
+    "group": "rv64f-cvt",
+    "format": "R",
+    "forms": [
+      "r"
+    ],
+    "sew": [],
+    "expected": "supported",
+    "note": ""
+  },
+  {
+    "mnemonic": "fcvt.s.w",
+    "ext": "RV64",
+    "group": "rv64f-cvt",
+    "format": "R",
+    "forms": [
+      "r"
+    ],
+    "sew": [],
+    "expected": "supported",
+    "note": ""
+  },
+  {
+    "mnemonic": "fcvt.s.wu",
+    "ext": "RV64",
+    "group": "rv64f-cvt",
+    "format": "R",
+    "forms": [
+      "r"
+    ],
+    "sew": [],
+    "expected": "supported",
+    "note": ""
+  },
+  {
+    "mnemonic": "fcvt.l.s",
+    "ext": "RV64",
+    "group": "rv64f-cvt",
+    "format": "R",
+    "forms": [
+      "r"
+    ],
+    "sew": [],
+    "expected": "supported",
+    "note": ""
+  },
+  {
+    "mnemonic": "fcvt.lu.s",
+    "ext": "RV64",
+    "group": "rv64f-cvt",
+    "format": "R",
+    "forms": [
+      "r"
+    ],
+    "sew": [],
+    "expected": "supported",
+    "note": ""
+  },
+  {
+    "mnemonic": "fcvt.s.l",
+    "ext": "RV64",
+    "group": "rv64f-cvt",
+    "format": "R",
+    "forms": [
+      "r"
+    ],
+    "sew": [],
+    "expected": "supported",
+    "note": ""
+  },
+  {
+    "mnemonic": "fcvt.s.lu",
+    "ext": "RV64",
+    "group": "rv64f-cvt",
+    "format": "R",
+    "forms": [
+      "r"
+    ],
+    "sew": [],
+    "expected": "supported",
+    "note": ""
+  },
+  {
+    "mnemonic": "fmv.x.w",
+    "ext": "RV64",
+    "group": "rv64f-misc",
+    "format": "R",
+    "forms": [
+      "r"
+    ],
+    "sew": [],
+    "expected": "supported",
+    "note": ""
+  },
+  {
+    "mnemonic": "fmv.w.x",
+    "ext": "RV64",
+    "group": "rv64f-misc",
+    "format": "R",
+    "forms": [
+      "r"
+    ],
+    "sew": [],
+    "expected": "supported",
+    "note": ""
+  },
+  {
+    "mnemonic": "feq.s",
+    "ext": "RV64",
+    "group": "rv64f-misc",
+    "format": "R",
+    "forms": [
+      "r"
+    ],
+    "sew": [],
+    "expected": "supported",
+    "note": ""
+  },
+  {
+    "mnemonic": "flt.s",
+    "ext": "RV64",
+    "group": "rv64f-misc",
+    "format": "R",
+    "forms": [
+      "r"
+    ],
+    "sew": [],
+    "expected": "supported",
+    "note": ""
+  },
+  {
+    "mnemonic": "fle.s",
+    "ext": "RV64",
+    "group": "rv64f-misc",
+    "format": "R",
+    "forms": [
+      "r"
+    ],
+    "sew": [],
+    "expected": "supported",
+    "note": ""
+  },
+  {
+    "mnemonic": "fclass.s",
+    "ext": "RV64",
+    "group": "rv64f-misc",
+    "format": "R",
+    "forms": [
+      "r"
+    ],
+    "sew": [],
+    "expected": "supported",
+    "note": ""
+  },
+  {
+    "mnemonic": "fld",
+    "ext": "RV64",
+    "group": "rv64d-mem",
+    "format": "I",
+    "forms": [
+      "i"
+    ],
+    "sew": [],
+    "expected": "supported",
+    "note": ""
+  },
+  {
+    "mnemonic": "fsd",
+    "ext": "RV64",
+    "group": "rv64d-mem",
+    "format": "S",
+    "forms": [
+      "s"
+    ],
+    "sew": [],
+    "expected": "supported",
+    "note": ""
+  },
+  {
+    "mnemonic": "fadd.d",
+    "ext": "RV64",
+    "group": "rv64d-arith",
+    "format": "R",
+    "forms": [
+      "r"
+    ],
+    "sew": [],
+    "expected": "supported",
+    "note": ""
+  },
+  {
+    "mnemonic": "fsub.d",
+    "ext": "RV64",
+    "group": "rv64d-arith",
+    "format": "R",
+    "forms": [
+      "r"
+    ],
+    "sew": [],
+    "expected": "supported",
+    "note": ""
+  },
+  {
+    "mnemonic": "fmul.d",
+    "ext": "RV64",
+    "group": "rv64d-arith",
+    "format": "R",
+    "forms": [
+      "r"
+    ],
+    "sew": [],
+    "expected": "supported",
+    "note": ""
+  },
+  {
+    "mnemonic": "fdiv.d",
+    "ext": "RV64",
+    "group": "rv64d-arith",
+    "format": "R",
+    "forms": [
+      "r"
+    ],
+    "sew": [],
+    "expected": "supported",
+    "note": ""
+  },
+  {
+    "mnemonic": "fsqrt.d",
+    "ext": "RV64",
+    "group": "rv64d-arith",
+    "format": "R",
+    "forms": [
+      "r"
+    ],
+    "sew": [],
+    "expected": "supported",
+    "note": ""
+  },
+  {
+    "mnemonic": "fmadd.d",
+    "ext": "RV64",
+    "group": "rv64d-fma",
+    "format": "R4",
+    "forms": [
+      "r4"
+    ],
+    "sew": [],
+    "expected": "supported",
+    "note": ""
+  },
+  {
+    "mnemonic": "fmsub.d",
+    "ext": "RV64",
+    "group": "rv64d-fma",
+    "format": "R4",
+    "forms": [
+      "r4"
+    ],
+    "sew": [],
+    "expected": "supported",
+    "note": ""
+  },
+  {
+    "mnemonic": "fnmadd.d",
+    "ext": "RV64",
+    "group": "rv64d-fma",
+    "format": "R4",
+    "forms": [
+      "r4"
+    ],
+    "sew": [],
+    "expected": "supported",
+    "note": ""
+  },
+  {
+    "mnemonic": "fnmsub.d",
+    "ext": "RV64",
+    "group": "rv64d-fma",
+    "format": "R4",
+    "forms": [
+      "r4"
+    ],
+    "sew": [],
+    "expected": "supported",
+    "note": ""
+  },
+  {
+    "mnemonic": "fsgnj.d",
+    "ext": "RV64",
+    "group": "rv64d-misc",
+    "format": "R",
+    "forms": [
+      "r"
+    ],
+    "sew": [],
+    "expected": "supported",
+    "note": ""
+  },
+  {
+    "mnemonic": "fsgnjn.d",
+    "ext": "RV64",
+    "group": "rv64d-misc",
+    "format": "R",
+    "forms": [
+      "r"
+    ],
+    "sew": [],
+    "expected": "supported",
+    "note": ""
+  },
+  {
+    "mnemonic": "fsgnjx.d",
+    "ext": "RV64",
+    "group": "rv64d-misc",
+    "format": "R",
+    "forms": [
+      "r"
+    ],
+    "sew": [],
+    "expected": "supported",
+    "note": ""
+  },
+  {
+    "mnemonic": "fmin.d",
+    "ext": "RV64",
+    "group": "rv64d-misc",
+    "format": "R",
+    "forms": [
+      "r"
+    ],
+    "sew": [],
+    "expected": "supported",
+    "note": ""
+  },
+  {
+    "mnemonic": "fmax.d",
+    "ext": "RV64",
+    "group": "rv64d-misc",
+    "format": "R",
+    "forms": [
+      "r"
+    ],
+    "sew": [],
+    "expected": "supported",
+    "note": ""
+  },
+  {
+    "mnemonic": "fcvt.s.d",
+    "ext": "RV64",
+    "group": "rv64d-cvt",
+    "format": "R",
+    "forms": [
+      "r"
+    ],
+    "sew": [],
+    "expected": "supported",
+    "note": ""
+  },
+  {
+    "mnemonic": "fcvt.d.s",
+    "ext": "RV64",
+    "group": "rv64d-cvt",
+    "format": "R",
+    "forms": [
+      "r"
+    ],
+    "sew": [],
+    "expected": "supported",
+    "note": ""
+  },
+  {
+    "mnemonic": "fcvt.w.d",
+    "ext": "RV64",
+    "group": "rv64d-cvt",
+    "format": "R",
+    "forms": [
+      "r"
+    ],
+    "sew": [],
+    "expected": "supported",
+    "note": ""
+  },
+  {
+    "mnemonic": "fcvt.wu.d",
+    "ext": "RV64",
+    "group": "rv64d-cvt",
+    "format": "R",
+    "forms": [
+      "r"
+    ],
+    "sew": [],
+    "expected": "supported",
+    "note": ""
+  },
+  {
+    "mnemonic": "fcvt.d.w",
+    "ext": "RV64",
+    "group": "rv64d-cvt",
+    "format": "R",
+    "forms": [
+      "r"
+    ],
+    "sew": [],
+    "expected": "supported",
+    "note": ""
+  },
+  {
+    "mnemonic": "fcvt.d.wu",
+    "ext": "RV64",
+    "group": "rv64d-cvt",
+    "format": "R",
+    "forms": [
+      "r"
+    ],
+    "sew": [],
+    "expected": "supported",
+    "note": ""
+  },
+  {
+    "mnemonic": "fcvt.l.d",
+    "ext": "RV64",
+    "group": "rv64d-cvt",
+    "format": "R",
+    "forms": [
+      "r"
+    ],
+    "sew": [],
+    "expected": "supported",
+    "note": ""
+  },
+  {
+    "mnemonic": "fcvt.lu.d",
+    "ext": "RV64",
+    "group": "rv64d-cvt",
+    "format": "R",
+    "forms": [
+      "r"
+    ],
+    "sew": [],
+    "expected": "supported",
+    "note": ""
+  },
+  {
+    "mnemonic": "fcvt.d.l",
+    "ext": "RV64",
+    "group": "rv64d-cvt",
+    "format": "R",
+    "forms": [
+      "r"
+    ],
+    "sew": [],
+    "expected": "supported",
+    "note": ""
+  },
+  {
+    "mnemonic": "fcvt.d.lu",
+    "ext": "RV64",
+    "group": "rv64d-cvt",
+    "format": "R",
+    "forms": [
+      "r"
+    ],
+    "sew": [],
+    "expected": "supported",
+    "note": ""
+  },
+  {
+    "mnemonic": "fmv.x.d",
+    "ext": "RV64",
+    "group": "rv64d-misc",
+    "format": "R",
+    "forms": [
+      "r"
+    ],
+    "sew": [],
+    "expected": "supported",
+    "note": ""
+  },
+  {
+    "mnemonic": "fmv.d.x",
+    "ext": "RV64",
+    "group": "rv64d-misc",
+    "format": "R",
+    "forms": [
+      "r"
+    ],
+    "sew": [],
+    "expected": "supported",
+    "note": ""
+  },
+  {
+    "mnemonic": "feq.d",
+    "ext": "RV64",
+    "group": "rv64d-misc",
+    "format": "R",
+    "forms": [
+      "r"
+    ],
+    "sew": [],
+    "expected": "supported",
+    "note": ""
+  },
+  {
+    "mnemonic": "flt.d",
+    "ext": "RV64",
+    "group": "rv64d-misc",
+    "format": "R",
+    "forms": [
+      "r"
+    ],
+    "sew": [],
+    "expected": "supported",
+    "note": ""
+  },
+  {
+    "mnemonic": "fle.d",
+    "ext": "RV64",
+    "group": "rv64d-misc",
+    "format": "R",
+    "forms": [
+      "r"
+    ],
+    "sew": [],
+    "expected": "supported",
+    "note": ""
+  },
+  {
+    "mnemonic": "fclass.d",
+    "ext": "RV64",
+    "group": "rv64d-misc",
+    "format": "R",
+    "forms": [
+      "r"
+    ],
+    "sew": [],
+    "expected": "supported",
+    "note": ""
+  },
+  {
+    "mnemonic": "csrrw",
+    "ext": "RV64",
+    "group": "zicsr",
+    "format": "I",
+    "forms": [
+      "i"
+    ],
+    "sew": [],
+    "expected": "supported",
+    "note": "read/write CSR (e.g. vl, vtype, fcsr, cycle)"
+  },
+  {
+    "mnemonic": "csrrs",
+    "ext": "RV64",
+    "group": "zicsr",
+    "format": "I",
+    "forms": [
+      "i"
+    ],
+    "sew": [],
+    "expected": "supported",
+    "note": "read/write CSR (e.g. vl, vtype, fcsr, cycle)"
+  },
+  {
+    "mnemonic": "csrrc",
+    "ext": "RV64",
+    "group": "zicsr",
+    "format": "I",
+    "forms": [
+      "i"
+    ],
+    "sew": [],
+    "expected": "supported",
+    "note": "read/write CSR (e.g. vl, vtype, fcsr, cycle)"
+  },
+  {
+    "mnemonic": "csrrwi",
+    "ext": "RV64",
+    "group": "zicsr",
+    "format": "I",
+    "forms": [
+      "i"
+    ],
+    "sew": [],
+    "expected": "supported",
+    "note": "read/write CSR (e.g. vl, vtype, fcsr, cycle)"
+  },
+  {
+    "mnemonic": "csrrsi",
+    "ext": "RV64",
+    "group": "zicsr",
+    "format": "I",
+    "forms": [
+      "i"
+    ],
+    "sew": [],
+    "expected": "supported",
+    "note": "read/write CSR (e.g. vl, vtype, fcsr, cycle)"
+  },
+  {
+    "mnemonic": "csrrci",
+    "ext": "RV64",
+    "group": "zicsr",
+    "format": "I",
+    "forms": [
+      "i"
+    ],
+    "sew": [],
+    "expected": "supported",
+    "note": "read/write CSR (e.g. vl, vtype, fcsr, cycle)"
+  },
+  {
+    "mnemonic": "c.*",
+    "ext": "RV64",
+    "group": "rv64c",
+    "format": "C",
+    "forms": [
+      "c"
+    ],
+    "sew": [],
+    "expected": "supported",
+    "note": "compressed 16-bit forms; exercised implicitly by all compiled code"
+  },
+  {
+    "mnemonic": "Zba (sh1add/sh2add/sh3add/add.uw/...)",
+    "ext": "RV64",
+    "group": "absent-ext",
+    "format": "-",
+    "forms": [],
+    "sew": [],
+    "expected": "absent_ext",
+    "note": "address-gen bitmanip: CVA6ConfigBExtEn=0 / not instantiated; would trap illegal"
+  },
+  {
+    "mnemonic": "Zbb (andn/orn/xnor/clz/ctz/cpop/min/max/rev8/...)",
+    "ext": "RV64",
+    "group": "absent-ext",
+    "format": "-",
+    "forms": [],
+    "sew": [],
+    "expected": "absent_ext",
+    "note": "basic bitmanip: CVA6ConfigBExtEn=0 / not instantiated; would trap illegal"
+  },
+  {
+    "mnemonic": "Zbc (clmul/clmulh/clmulr)",
+    "ext": "RV64",
+    "group": "absent-ext",
+    "format": "-",
+    "forms": [],
+    "sew": [],
+    "expected": "absent_ext",
+    "note": "carry-less multiply: CVA6ConfigBExtEn=0 / not instantiated; would trap illegal"
+  },
+  {
+    "mnemonic": "Zbs (bclr/bext/binv/bset)",
+    "ext": "RV64",
+    "group": "absent-ext",
+    "format": "-",
+    "forms": [],
+    "sew": [],
+    "expected": "absent_ext",
+    "note": "single-bit bitmanip: CVA6ConfigBExtEn=0 / not instantiated; would trap illegal"
+  },
+  {
+    "mnemonic": "Zicond (czero.eqz/czero.nez)",
+    "ext": "RV64",
+    "group": "absent-ext",
+    "format": "-",
+    "forms": [],
+    "sew": [],
+    "expected": "absent_ext",
+    "note": "conditional zero: CVA6ConfigBExtEn=0 / not instantiated; would trap illegal"
+  },
+  {
+    "mnemonic": "Zcb/Zcmp",
+    "ext": "RV64",
+    "group": "absent-ext",
+    "format": "-",
+    "forms": [],
+    "sew": [],
+    "expected": "absent_ext",
+    "note": "extra compressed: CVA6ConfigBExtEn=0 / not instantiated; would trap illegal"
+  },
+  {
+    "mnemonic": "Zfh (scalar flh/fsh/fcvt.h.*)",
+    "ext": "RV64",
+    "group": "absent-ext",
+    "format": "-",
+    "forms": [],
+    "sew": [],
+    "expected": "absent_ext",
+    "note": "scalar half precision: CVA6ConfigBExtEn=0 / not instantiated; would trap illegal"
+  }
+]

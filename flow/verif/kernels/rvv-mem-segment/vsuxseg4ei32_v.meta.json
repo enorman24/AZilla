@@ -1,0 +1,8 @@
+{
+  "mnemonic": "vsuxseg4ei32.v",
+  "group": "rvv-mem-segment",
+  "ext": "RVV",
+  "expected": "blocked_silent",
+  "variants": [],
+  "note": "indexed-unordered segment store: silent mis-decode"
+}

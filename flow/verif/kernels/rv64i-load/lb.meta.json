@@ -1,0 +1,8 @@
+{
+  "mnemonic": "lb",
+  "group": "rv64i-load",
+  "ext": "RV64",
+  "expected": "supported",
+  "variants": [],
+  "note": ""
+}

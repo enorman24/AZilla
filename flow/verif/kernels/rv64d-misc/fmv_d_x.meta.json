@@ -1,0 +1,8 @@
+{
+  "mnemonic": "fmv.d.x",
+  "group": "rv64d-misc",
+  "ext": "RV64",
+  "expected": "supported",
+  "variants": [],
+  "note": ""
+}

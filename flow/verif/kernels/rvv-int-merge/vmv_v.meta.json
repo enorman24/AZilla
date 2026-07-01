@@ -1,0 +1,8 @@
+{
+  "mnemonic": "vmv.v",
+  "group": "rvv-int-merge",
+  "ext": "RVV",
+  "expected": "supported",
+  "variants": [],
+  "note": "vmv.v.v/.v.x/.v.i splat/copy"
+}

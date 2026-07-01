@@ -1,0 +1,8 @@
+{
+  "mnemonic": "vsm.v",
+  "group": "rvv-mem-unit",
+  "ext": "RVV",
+  "expected": "supported",
+  "variants": [],
+  "note": "mask store EEW=1"
+}

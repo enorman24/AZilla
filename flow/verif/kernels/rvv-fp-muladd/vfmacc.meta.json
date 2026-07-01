@@ -1,0 +1,8 @@
+{
+  "mnemonic": "vfmacc",
+  "group": "rvv-fp-muladd",
+  "ext": "RVV",
+  "expected": "supported",
+  "variants": [],
+  "note": "FP fused multiply-accumulate; Spike oracle (FMA fusion); FP32/FP64"
+}

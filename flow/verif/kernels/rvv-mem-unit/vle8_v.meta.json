@@ -1,0 +1,8 @@
+{
+  "mnemonic": "vle8.v",
+  "group": "rvv-mem-unit",
+  "ext": "RVV",
+  "expected": "supported",
+  "variants": [],
+  "note": "unit-stride load (extraction primitive: verify early)"
+}

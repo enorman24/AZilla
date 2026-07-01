@@ -1,0 +1,8 @@
+{
+  "mnemonic": "vlm.v",
+  "group": "rvv-mem-unit",
+  "ext": "RVV",
+  "expected": "supported",
+  "variants": [],
+  "note": "mask load EEW=1 (ceil(vl/8) bytes)"
+}

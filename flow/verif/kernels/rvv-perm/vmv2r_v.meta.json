@@ -1,0 +1,8 @@
+{
+  "mnemonic": "vmv2r.v",
+  "group": "rvv-perm",
+  "ext": "RVV",
+  "expected": "supported",
+  "variants": [],
+  "note": ""
+}

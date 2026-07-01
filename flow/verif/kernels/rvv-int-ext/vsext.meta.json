@@ -1,0 +1,8 @@
+{
+  "mnemonic": "vsext",
+  "group": "rvv-int-ext",
+  "ext": "RVV",
+  "expected": "supported",
+  "variants": [],
+  "note": "sign-extend vf2/vf4/vf8"
+}

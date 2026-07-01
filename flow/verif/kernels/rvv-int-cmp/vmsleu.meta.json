@@ -1,0 +1,8 @@
+{
+  "mnemonic": "vmsleu",
+  "group": "rvv-int-cmp",
+  "ext": "RVV",
+  "expected": "supported",
+  "variants": [],
+  "note": ""
+}
